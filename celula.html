@@ -949,27 +949,34 @@ function eukNucleus(cell, cut, E) {
 
 function eukRER(cell, cut, E) {
   const geos = [], ribos = [];
-  /* Cisternas en bandas apiladas alrededor del núcleo, con huecos entre ellas */
+  /* Cisternas en bandas apiladas que rodean el núcleo por completo (360°), con huecos entre ellas */
   const bands = [[0.95, 0.15], [1.35, 0.15], [1.75, 0.15], [2.15, 0.14]];
+  const NU = 220, NV = 12;
   for (let k = 0; k < 4; k++) {
     const rk = 2.13 + k * 0.23;
     bands.forEach(([tc, hw], b) => {
-      const p0 = -1.45 + k * 0.06 + b * 0.12, p1 = 2.35 - k * 0.08 - b * 0.1;
+      const p0 = -1.45 + k * 0.06 + b * 0.12;
       const t0 = tc - hw + k * 0.01, t1 = tc + hw - k * 0.01;
       const fn = (u, v, p) => {
-        const ph = p0 + (p1 - p0) * u, th = t0 + (t1 - t0) * v;
-        const e = Math.pow(Math.sin(Math.PI * u), 0.4);
-        const r = rk + (0.07 * Math.sin(ph * 9 + k * 1.7 + b * 2.1) + 0.03 * Math.sin(th * 11 + ph * 3)) * e;
+        const ph = p0 + TAU * u, th = t0 + (t1 - t0) * v;
+        const r = rk + 0.07 * Math.sin(ph * 9 + k * 1.7 + b * 2.1) + 0.03 * Math.sin(th * 11 + ph * 3);
         return sph(r, th, ph, p);
       };
-      geos.push(paramSurface(fn, 130, 12));
+      const sg = paramSurface(fn, NU, NV), nrm = sg.attributes.normal;
+      /* Anillo cerrado: se promedian las normales de la costura para que no se note */
+      for (let j = 0; j <= NV; j++) {
+        const a = j * (NU + 1), z = a + NU;
+        _a.fromBufferAttribute(nrm, a).add(_b.fromBufferAttribute(nrm, z)).normalize();
+        nrm.setXYZ(a, _a.x, _a.y, _a.z); nrm.setXYZ(z, _a.x, _a.y, _a.z);
+      }
+      geos.push(sg);
       for (const v of [0, 1]) {
         const pts = [];
-        for (let i = 0; i <= 70; i++) pts.push(fn(i / 70, v, V3()));
-        geos.push(tubeGeo(pts, 140, 0.034, 6));
+        for (let i = 0; i < 120; i++) pts.push(fn(i / 120, v, V3()));
+        geos.push(tubeGeo(pts, 240, 0.034, 6, true));
       }
-      for (let i = 0; i < 190; i++) {
-        const p = fn(rr(0.02, 0.98), rr(0.05, 0.95), V3());
+      for (let i = 0; i < 310; i++) {
+        const p = fn(R(), rr(0.05, 0.95), V3());
         const nn = p.clone().normalize();
         ribos.push(p.addScaledVector(nn, (R() < 0.5 ? -1 : 1) * 0.048));
       }
