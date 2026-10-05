@@ -1,0 +1,39 @@
+CÉLULA 3D · Eucariota y Procariota
+==================================
+
+Cómo abrirlo
+------------
+Hacé doble clic en celula.html. Se abre en tu navegador (Chrome, Edge o Firefox actualizados).
+No necesita internet ni servidor: todo lo que usa está en esta carpeta.
+
+Qué hay en la carpeta
+---------------------
+celula.html              La página: modelos 3D, animaciones, textos e interfaz.
+index.html               Entrada para la web: redirige a celula.html (GitHub Pages abre index.html).
+.nojekyll                Archivo vacío: le indica a GitHub Pages que publique los archivos tal cual.
+lib/three-bundle.js      three.js r160 (motor 3D) con los complementos que usa la página:
+                         controles de órbita, posprocesado (bloom), entorno de luz y utilidades de geometría.
+lib/LICENSE-three.txt    Licencia MIT de three.js.
+fonts/fuentes.css        Tipografías Inter y Space Grotesk, incrustadas.
+fonts/OFL-*.txt          Licencias de las tipografías (SIL Open Font License 1.1).
+
+Si movés o copiás el proyecto, llevá la carpeta completa: celula.html necesita lib/ y fonts/ a su lado.
+
+Publicar en GitHub Pages
+------------------------
+1. Creá un repositorio público en github.com (por ejemplo "celula-3d").
+2. Add file > Upload files: arrastrá TODO el contenido de esta carpeta (incluido .nojekyll
+   y las carpetas lib y fonts) y hacé "Commit changes".
+3. Settings > Pages > Build and deployment: "Deploy from a branch", rama main, carpeta / (root), Save.
+4. En uno o dos minutos queda en https://TU-USUARIO.github.io/celula-3d/
+
+Requisitos
+----------
+Un navegador con WebGL2 (cualquier Chrome, Edge o Firefox de los últimos años) y aceleración
+por hardware activada.
+
+Controles
+---------
+Arrastrar: rotar · Rueda o pellizco: acercar · Clic derecho: desplazar · Clic: ver información
+Teclas: 1 / 2 cambia de célula · C corte · L etiquetas · T recorrido · R vista · Espacio pausa
+        Flechas: estructura anterior / siguiente · Esc: cerrar

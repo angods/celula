@@ -1,0 +1,2251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Célula 3D · Eucariota y Procariota</title>
+<meta name="description" content="Modelo 3D interactivo y animado de la célula eucariota (animal) y la célula procariota (bacteria), con sus partes señaladas.">
+<link rel="stylesheet" href="fonts/fuentes.css">
+<style>
+:root{
+  --bg:#03060f;
+  --panel:rgba(10,18,36,.64);
+  --panel-2:rgba(16,28,54,.72);
+  --brd:rgba(150,200,255,.13);
+  --brd-2:rgba(150,200,255,.26);
+  --txt:#e9f2ff;
+  --mut:#8fa3c4;
+  --dim:#5d7096;
+  --acc:#5ec8ff;
+  --acc-2:#ff5fa2;
+  --ok:#7ee0a8;
+  --rad:18px;
+  --shadow:0 18px 50px -12px rgba(0,0,0,.65), 0 2px 0 rgba(255,255,255,.03) inset;
+  --ease:cubic-bezier(.22,.8,.24,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+#scene{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none;outline:none}
+#scene.hovering{cursor:pointer}
+#lines{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:2}
+#lines path{fill:none;stroke:rgba(225,238,255,.5);stroke-width:1;transition:stroke .25s,opacity .3s}
+#lines path.on{stroke:#fff;stroke-width:1.6}
+#lines circle{fill:#fff;transition:opacity .3s}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:3}
+.lbl{position:absolute;left:0;top:0;display:flex;align-items:center;gap:7px;padding:4px 11px 4px 8px;border-radius:999px;
+  background:rgba(7,13,28,.74);border:1px solid rgba(255,255,255,.12);font-size:12px;font-weight:500;letter-spacing:.01em;
+  white-space:nowrap;pointer-events:auto;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  transition:opacity .35s var(--ease),background .2s,border-color .2s,box-shadow .2s;will-change:transform;opacity:0}
+.lbl i{width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);flex:none}
+.lbl:hover,.lbl.on{background:rgba(18,32,62,.92);border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 22%,transparent)}
+.lbl.on{font-weight:600}
+#tip{position:fixed;z-index:20;pointer-events:none;padding:6px 10px;border-radius:9px;font-size:12px;font-weight:600;
+  background:rgba(6,12,26,.9);border:1px solid var(--brd-2);opacity:0;transform:translate(14px,14px);transition:opacity .15s}
+#tip.show{opacity:1}
+
+.glass{background:var(--panel);border:1px solid var(--brd);box-shadow:var(--shadow);
+  backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%)}
+
+/* ---------- header ---------- */
+header.top{position:fixed;z-index:10;top:14px;left:14px;right:14px;height:62px;border-radius:var(--rad);
+  display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 16px;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand svg{flex:none}
+.brand h1{font-family:"Space Grotesk",Inter,sans-serif;font-size:18px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.brand p{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg{position:relative;display:flex;padding:4px;border-radius:13px;background:rgba(0,0,0,.32);border:1px solid var(--brd)}
+.seg button{position:relative;z-index:1;padding:8px 18px;font-size:13.5px;font-weight:600;color:var(--mut);border-radius:10px;transition:color .3s}
+.seg button.on{color:#06101f}
+.seg-ind{position:absolute;z-index:0;top:4px;bottom:4px;left:4px;border-radius:10px;
+  background:linear-gradient(135deg,#8be0ff,#5ec8ff 55%,#7d9bff);box-shadow:0 6px 18px -4px rgba(94,200,255,.55);
+  transition:transform .45s var(--ease),width .45s var(--ease),background .45s}
+.seg.pro .seg-ind{background:linear-gradient(135deg,#9df3b9,#4fd38b 55%,#2fb5a0);box-shadow:0 6px 18px -4px rgba(79,211,139,.55)}
+.top-actions{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:11px;font-size:13px;font-weight:600;
+  border:1px solid var(--brd-2);background:rgba(255,255,255,.04);transition:background .2s,border-color .2s,transform .15s}
+.btn:hover{background:rgba(255,255,255,.09);border-color:rgba(160,210,255,.4)}
+.btn:active{transform:scale(.97)}
+.btn svg{width:16px;height:16px}
+
+/* ---------- left list ---------- */
+#list{position:fixed;z-index:9;top:90px;left:14px;width:252px;max-height:calc(100vh - 186px);border-radius:var(--rad);
+  display:flex;flex-direction:column;overflow:hidden;transition:transform .5s var(--ease),opacity .5s}
+.ph{display:flex;align-items:baseline;justify-content:space-between;padding:15px 16px 9px}
+.ph h2{font-family:"Space Grotesk",Inter,sans-serif;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.ph span{font-size:12px;color:var(--dim)}
+#partList{list-style:none;overflow-y:auto;padding:2px 8px 10px;scrollbar-width:thin;scrollbar-color:rgba(150,200,255,.2) transparent}
+#partList li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;font-size:13.2px;cursor:pointer;
+  color:#cfdcf2;transition:background .18s,color .18s;position:relative;opacity:0;transform:translateX(-8px);
+  animation:liIn .5s var(--ease) forwards}
+@keyframes liIn{to{opacity:1;transform:none}}
+#partList li:hover{background:rgba(255,255,255,.055);color:#fff}
+#partList li.on{background:linear-gradient(90deg,color-mix(in srgb,var(--c) 22%,transparent),rgba(255,255,255,.03));color:#fff;font-weight:600}
+#partList li.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--c)}
+#partList li i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 8px color-mix(in srgb,var(--c) 70%,transparent);flex:none}
+#partList li small{margin-left:auto;font-size:10.5px;color:var(--dim);font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+
+/* ---------- right info ---------- */
+#info{position:fixed;z-index:9;top:90px;right:14px;width:330px;max-height:calc(100vh - 186px);border-radius:var(--rad);
+  overflow-y:auto;padding:18px 18px 16px;scrollbar-width:thin;scrollbar-color:rgba(150,200,255,.2) transparent;transition:opacity .3s}
+#info.swap{animation:swap .45s var(--ease)}
+@keyframes swap{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.ip-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--mut);font-weight:600}
+.ip-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.ip-dot{width:38px;height:38px;border-radius:12px;flex:none;margin-top:2px;
+  background:radial-gradient(circle at 32% 30%,#fff9 0,var(--c) 38%,color-mix(in srgb,var(--c) 45%,#000) 100%);box-shadow:0 8px 22px -6px var(--c)}
+.ip-head h3{font-family:"Space Grotesk",Inter,sans-serif;font-size:21px;line-height:1.15;font-weight:700;letter-spacing:-.01em;margin-top:3px}
+.ip-x{margin-left:auto;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--mut);flex:none;transition:background .2s,color .2s}
+.ip-x:hover{background:rgba(255,255,255,.08);color:#fff}
+#info p{font-size:13.6px;line-height:1.6;color:#c7d5ec}
+#info h4{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:var(--mut);margin:16px 0 8px;font-weight:600}
+#info ul{list-style:none;display:grid;gap:7px}
+#info ul li{font-size:13.2px;line-height:1.5;color:#d3def0;padding-left:16px;position:relative}
+#info ul li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;border-radius:2px;background:var(--c,var(--acc));transform:rotate(45deg)}
+.ip-fact{margin-top:14px;padding:11px 13px;border-radius:12px;font-size:12.8px;line-height:1.55;color:#d8e4f6;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--c,#5ec8ff) 16%,transparent),rgba(255,255,255,.02));border:1px solid color-mix(in srgb,var(--c,#5ec8ff) 30%,transparent)}
+.ip-fact b{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px;color:var(--c,var(--acc))}
+.ip-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.ip-grid div{padding:9px 11px;border-radius:11px;background:rgba(255,255,255,.035);border:1px solid var(--brd)}
+.ip-grid span{display:block;font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.09em;margin-bottom:2px}
+.ip-grid b{font-size:13px;font-weight:600}
+.ip-actions{display:flex;gap:8px;margin-top:16px}
+.ip-actions .btn{flex:1;justify-content:center;height:36px}
+.ip-actions .btn.on{background:color-mix(in srgb,var(--c,#5ec8ff) 24%,transparent);border-color:var(--c,var(--acc))}
+.ip-nav{display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:12px;color:var(--mut)}
+.ip-nav button{width:34px;height:30px;border-radius:9px;border:1px solid var(--brd);display:grid;place-items:center;transition:background .2s}
+.ip-nav button:hover{background:rgba(255,255,255,.07)}
+.ip-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.ip-tags span{font-size:11.5px;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--brd);color:#c9d7ee}
+
+/* ---------- toolbar ---------- */
+#toolbar{position:fixed;z-index:10;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:4px;padding:6px;border-radius:16px}
+.tb{position:relative;display:flex;align-items:center;gap:7px;height:40px;padding:0 13px;border-radius:11px;font-size:12.8px;font-weight:600;
+  color:var(--mut);transition:background .2s,color .2s}
+.tb svg{width:18px;height:18px;flex:none}
+.tb:hover{background:rgba(255,255,255,.07);color:#fff}
+.tb.on{color:#fff;background:rgba(94,200,255,.16)}
+.tb.on svg{color:var(--acc)}
+.sep{width:1px;margin:8px 3px;background:var(--brd)}
+#hint{position:fixed;z-index:8;left:50%;bottom:72px;transform:translateX(-50%);font-size:11.5px;color:var(--dim);white-space:nowrap;
+  transition:opacity .6s;pointer-events:none;text-align:center}
+#hint b{color:var(--mut);font-weight:600}
+#scale{position:fixed;z-index:8;right:22px;bottom:26px;display:flex;flex-direction:column;align-items:flex-end;gap:5px;font-size:11.5px;color:var(--mut);pointer-events:none}
+#scale .bar{height:6px;border:1.5px solid rgba(220,235,255,.75);border-top:0;transition:width .25s}
+#badge{position:fixed;z-index:8;left:22px;bottom:26px;font-size:11.5px;color:var(--dim);pointer-events:none;line-height:1.5}
+#badge b{display:block;color:var(--mut);font-size:12px;font-weight:600}
+
+/* ---------- modal ---------- */
+.modal{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:20px;background:rgba(2,5,12,.55);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:opacity .35s}
+.modal.hidden{opacity:0;pointer-events:none}
+.modal .card{width:min(860px,100%);max-height:calc(100vh - 40px);overflow:auto;border-radius:22px;padding:24px 24px 20px;
+  background:var(--panel-2);transform:translateY(0) scale(1);transition:transform .45s var(--ease)}
+.modal.hidden .card{transform:translateY(16px) scale(.98)}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.card-h h2{font-family:"Space Grotesk",Inter,sans-serif;font-size:24px;letter-spacing:-.01em}
+.card .sub{font-size:13.5px;color:var(--mut);margin-bottom:16px}
+table.cmp{width:100%;border-collapse:separate;border-spacing:0;font-size:13.4px}
+table.cmp th,table.cmp td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--brd);vertical-align:top;line-height:1.45}
+table.cmp thead th{font-family:"Space Grotesk",Inter,sans-serif;font-size:14px;position:sticky;top:-24px;background:var(--panel-2)}
+table.cmp thead th:nth-child(2){color:#8be0ff}
+table.cmp thead th:nth-child(3){color:#7ee0a8}
+table.cmp tbody th{color:var(--mut);font-weight:600;width:24%}
+table.cmp tbody tr:hover td,table.cmp tbody tr:hover th{background:rgba(255,255,255,.025)}
+.same{margin-top:16px;padding:12px 14px;border-radius:13px;font-size:13.2px;line-height:1.55;background:rgba(126,224,168,.08);border:1px solid rgba(126,224,168,.25);color:#d4f5e2}
+
+/* ---------- loader ---------- */
+#loader{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 45%,#0b1d3a 0,#03060f 70%);transition:opacity .9s ease,visibility .9s}
+#loader.done{opacity:0;visibility:hidden}
+#loader .ld{display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;padding:24px}
+#loader p{color:var(--mut);font-size:14px;line-height:1.6}
+#loader small{color:var(--dim)}
+.blob{width:86px;height:86px;border-radius:50%;position:relative;
+  background:radial-gradient(circle at 35% 30%,#bff0ff 0,#5ec8ff 30%,#1d5fa8 75%);box-shadow:0 0 60px -6px rgba(94,200,255,.6);animation:morph 3.2s ease-in-out infinite}
+.blob::after{content:"";position:absolute;inset:28%;border-radius:50%;background:radial-gradient(circle at 40% 35%,#f1c2ff,#9b4dca 60%,#5b2380);animation:morph 2.6s ease-in-out infinite reverse}
+@keyframes morph{0%,100%{border-radius:50% 48% 52% 50%/50% 52% 48% 50%;transform:rotate(0) scale(1)}
+  33%{border-radius:58% 42% 50% 50%/45% 55% 45% 55%;transform:rotate(60deg) scale(1.04)}
+  66%{border-radius:45% 55% 42% 58%/55% 45% 58% 42%;transform:rotate(120deg) scale(.97)}}
+#loader.err .blob{filter:grayscale(1) brightness(.6);animation:none}
+
+/* ---------- responsive ---------- */
+@media (max-width:1100px){ #info{width:290px} #list{width:226px} }
+@media (max-width:860px){
+  header.top{top:10px;left:10px;right:10px;height:56px;padding:0 8px 0 12px}
+  .brand p{display:none}
+  .brand h1{font-size:16px}
+  .seg button{padding:7px 12px;font-size:12.5px}
+  .top-actions .btn span{display:none}
+  .top-actions .btn{padding:0 10px}
+  #list{top:auto;bottom:74px;left:10px;right:10px;width:auto;max-height:none;border-radius:14px}
+  #list .ph{display:none}
+  #partList{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;padding:7px;scrollbar-width:none}
+  #partList::-webkit-scrollbar{display:none}
+  #partList li{flex:none;padding:7px 11px;font-size:12.5px;white-space:nowrap;border:1px solid var(--brd)}
+  #partList li small{display:none}
+  #partList li.on::before{display:none}
+  #info{top:auto;bottom:136px;left:10px;right:10px;width:auto;max-height:40vh;border-radius:16px;padding:14px}
+  #info.collapsed{display:none}
+  #toolbar{bottom:12px;left:10px;right:10px;transform:none;justify-content:space-between;overflow-x:auto;scrollbar-width:none}
+  .tb span{display:none}
+  .tb{padding:0 11px}
+  .sep{display:none}
+  #hint,#badge{display:none}
+  #scale{right:16px;bottom:auto;top:78px}
+}
+@media (max-width:420px){ .brand h1{font-size:14px} .brand svg{width:26px;height:26px} .seg button{padding:7px 9px} }
+@media (prefers-reduced-motion:reduce){ *{animation-duration:.01ms!important;transition-duration:.01ms!important} }
+</style>
+<script>
+  window.__ok = false; window.__failed = false;
+  function __fail(msg){
+    window.__failed = true;
+    var l = document.getElementById('loader'); if(!l) return;
+    l.classList.add('err');
+    l.querySelector('p').innerHTML = msg;
+  }
+  window.addEventListener('error', function(e){
+    if(!window.__ok && !window.__failed) __fail('No se pudo iniciar la escena 3D.<br><small>' + (e.message || 'Error desconocido') + '</small>');
+  });
+  setTimeout(function(){
+    if(!window.__ok && !window.__failed) __fail('La escena tarda demasiado en cargar.<br><small>Verificá que la carpeta <b>lib</b> esté junto a celula.html y que tu navegador soporte WebGL2.</small>');
+  }, 25000);
+</script>
+<!-- three.js r160 + complementos, empaquetados localmente (ver lib/LICENSE-three.txt) -->
+<script src="lib/three-bundle.js"></script>
+</head>
+<body>
+<canvas id="scene" tabindex="0" aria-label="Modelo 3D interactivo de la célula"></canvas>
+<svg id="lines" aria-hidden="true"></svg>
+<div id="labels"></div>
+<div id="tip"></div>
+
+<header class="top glass">
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+      <defs>
+        <radialGradient id="lg1" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#c8f3ff"/><stop offset=".45" stop-color="#5ec8ff"/><stop offset="1" stop-color="#1b4f96"/></radialGradient>
+        <radialGradient id="lg2" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#f6d0ff"/><stop offset=".6" stop-color="#a05cd6"/><stop offset="1" stop-color="#55207f"/></radialGradient>
+      </defs>
+      <path d="M20 3c8.8 0 16 6.6 16.4 15.6.5 9.6-6.9 18.2-16.6 18.4C10.4 37.2 3.4 30 3.6 20.6 3.8 10.6 11 3 20 3z" fill="url(#lg1)"/>
+      <circle cx="21.5" cy="19" r="7" fill="url(#lg2)"/>
+      <circle cx="23" cy="17.6" r="2.2" fill="#3b2bd1"/>
+      <ellipse cx="11.5" cy="26" rx="3.6" ry="1.8" fill="#ff6b81" transform="rotate(-25 11.5 26)"/>
+      <circle cx="29" cy="28" r="1.8" fill="#f9c74f"/>
+    </svg>
+    <div><h1>Célula 3D</h1><p>Atlas interactivo · eucariota y procariota</p></div>
+  </div>
+  <div class="seg" id="seg" role="tablist" aria-label="Tipo de célula">
+    <span class="seg-ind"></span>
+    <button data-cell="euk" class="on" role="tab">Eucariota</button>
+    <button data-cell="pro" role="tab">Procariota</button>
+  </div>
+  <div class="top-actions">
+    <button class="btn" id="btnCompare" title="Comparar ambos tipos de célula">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7l-3 6h6zM19 7l-3 6h6zM5 7h14M8 21h8"/></svg>
+      <span>Comparar</span>
+    </button>
+  </div>
+</header>
+
+<aside id="list" class="glass" aria-label="Estructuras de la célula">
+  <div class="ph"><h2>Estructuras</h2><span id="count"></span></div>
+  <ul id="partList"></ul>
+</aside>
+
+<aside id="info" class="glass" aria-live="polite"></aside>
+
+<nav id="toolbar" class="glass" aria-label="Controles">
+  <button class="tb on" id="tbRotate" title="Rotación automática (A)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Rotar</span></button>
+  <button class="tb on" id="tbCut" title="Corte para ver el interior (C)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg><span>Corte</span></button>
+  <button class="tb on" id="tbLabels" title="Mostrar etiquetas (L)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg><span>Etiquetas</span></button>
+  <button class="tb" id="tbTour" title="Recorrido guiado por todas las estructuras (T)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/></svg><span>Recorrido</span></button>
+  <span class="sep"></span>
+  <button class="tb" id="tbPause" title="Pausar animación (Espacio)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5v14M15 5v14"/></svg><span>Pausa</span></button>
+  <button class="tb" id="tbReset" title="Reiniciar vista (R)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Vista</span></button>
+  <button class="tb" id="tbFull" title="Pantalla completa (F)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>Pantalla</span></button>
+</nav>
+
+<div id="hint"><b>Arrastrá</b> para rotar · <b>rueda / pellizco</b> para acercar · <b>clic derecho</b> para desplazar · <b>clic</b> en una estructura para ver su información</div>
+<div id="badge"><b id="badgeT">Célula eucariota animal</b><span id="badgeS">Modelo esquemático · proporciones aproximadas</span></div>
+<div id="scale"><div class="bar"></div><span>—</span></div>
+
+<div class="modal hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="cmpTitle">
+  <div class="card glass">
+    <div class="card-h"><h2 id="cmpTitle">Eucariota vs. Procariota</h2>
+      <button class="ip-x" id="modalX" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <p class="sub">Las dos grandes organizaciones celulares de la vida. Las diferencias clave están en la compartimentación interna.</p>
+    <table class="cmp" id="cmpTable"></table>
+    <div class="same" id="cmpSame"></div>
+  </div>
+</div>
+
+<div id="loader"><div class="ld"><div class="blob"></div><p>Preparando la célula…<br><small>Generando orgánulos en 3D</small></p></div></div>
+
+<script type="module">
+
+/* three.js y sus complementos vienen de lib/three-bundle.js (copia local, sin internet) */
+if (!window.THREE || !window.THREE_ADDONS) {
+  __fail('No se encontró la biblioteca 3D.<br><small>La carpeta <b>lib</b> (con three-bundle.js) tiene que estar junto a celula.html.</small>');
+  throw new Error('lib/three-bundle.js no se cargó');
+}
+const THREE = window.THREE;
+const { OrbitControls, EffectComposer, RenderPass, UnrealBloomPass, OutputPass, RoomEnvironment, mergeGeometries, mergeVertices } = window.THREE_ADDONS;
+
+/* =========================================================
+   Utilidades
+   ========================================================= */
+const $ = (s, r = document) => r.querySelector(s);
+const TAU = Math.PI * 2;
+const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const col = (h) => new THREE.Color(h);
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+let R = rng(20261005);
+const rr = (a, b) => a + (b - a) * R();
+function randDir(v = V3()) {
+  const u = rr(-1, 1), t = rr(0, TAU), s = Math.sqrt(1 - u * u);
+  return v.set(s * Math.cos(t), u, s * Math.sin(t));
+}
+function sph(r, th, ph, v = V3()) {
+  const s = Math.sin(th);
+  return v.set(r * s * Math.cos(ph), r * Math.cos(th), r * s * Math.sin(ph));
+}
+const ease = {
+  inOut: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+  out: (t) => 1 - Math.pow(1 - t, 3),
+  back: (t) => { const c1 = 1.25, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); },
+};
+const U = { time: { value: 0 } };
+const _a = V3(), _b = V3(), _c = V3(), _d = V3();
+
+/* =========================================================
+   GLSL compartido
+   ========================================================= */
+const NOISE = /* glsl */`
+float hash3(vec3 p){ p=fract(p*0.3183099+vec3(0.11,0.17,0.13)); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+float vnoise(vec3 x){ vec3 i=floor(x); vec3 f=fract(x); f=f*f*(3.0-2.0*f);
+  return mix(mix(mix(hash3(i),hash3(i+vec3(1.,0.,0.)),f.x),mix(hash3(i+vec3(0.,1.,0.)),hash3(i+vec3(1.,1.,0.)),f.x),f.y),
+             mix(mix(hash3(i+vec3(0.,0.,1.)),hash3(i+vec3(1.,0.,1.)),f.x),mix(hash3(i+vec3(0.,1.,1.)),hash3(i+vec3(1.,1.,1.)),f.x),f.y),f.z); }
+float fbm(vec3 p){ float s=0.0, a=0.5; for(int i=0;i<4;i++){ s+=a*vnoise(p); p=p*2.03+vec3(1.7,9.2,3.1); a*=0.5; } return s; }
+`;
+const SHAPE_GLSL = /* glsl */`
+float shapeF(vec3 n){ return 1.0+0.03*sin(2.7*n.x+1.3*n.y+0.4)+0.025*sin(3.3*n.y-2.2*n.z+1.1)+0.02*sin(3.9*n.z+2.6*n.x+2.3)+0.012*sin(5.1*n.x-4.3*n.z+0.7); }
+`;
+function shapeF(n) {
+  return 1 + 0.03 * Math.sin(2.7 * n.x + 1.3 * n.y + 0.4) + 0.025 * Math.sin(3.3 * n.y - 2.2 * n.z + 1.1)
+    + 0.02 * Math.sin(3.9 * n.z + 2.6 * n.x + 2.3) + 0.012 * Math.sin(5.1 * n.x - 4.3 * n.z + 0.7);
+}
+
+/* =========================================================
+   Renderer, escena, cámara, post-proceso
+   ========================================================= */
+const canvas = $('#scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+renderer.setPixelRatio(DPR);
+renderer.setSize(innerWidth, innerHeight, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.localClippingEnabled = true;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.05, 400);
+camera.position.set(9.6, 7.0, 12.6);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.075;
+controls.rotateSpeed = 0.75;
+controls.zoomSpeed = 0.9;
+controls.panSpeed = 0.7;
+controls.minDistance = 2.2;
+controls.maxDistance = 34;
+controls.autoRotate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+controls.autoRotateSpeed = 0.55;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x140a26, 0.55));
+const keyLight = new THREE.DirectionalLight(0xfff0e0, 2.3); keyLight.position.set(6, 9, 7); scene.add(keyLight);
+const rimLight = new THREE.DirectionalLight(0x74d0ff, 1.6); rimLight.position.set(-8, 2, -7); scene.add(rimLight);
+const underLight = new THREE.DirectionalLight(0xff8fc8, 0.5); underLight.position.set(0, -8, 3); scene.add(underLight);
+const innerLight = new THREE.PointLight(0xffe2f4, 1.6, 9, 2); scene.add(innerLight);
+
+const rt = new THREE.WebGLRenderTarget(innerWidth * DPR, innerHeight * DPR, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, rt);
+composer.setPixelRatio(DPR);
+composer.setSize(innerWidth, innerHeight);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.3, 0.5, 0.9);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* Fondo: nebulosa líquida */
+const bgTint = { value: col('#0b2547') };
+const bg = new THREE.Mesh(new THREE.SphereGeometry(150, 48, 24), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false,
+  uniforms: { uTime: U.time, uTint: bgTint },
+  vertexShader: `varying vec3 vD; void main(){ vD=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: `uniform float uTime; uniform vec3 uTint; varying vec3 vD; ${NOISE}
+  void main(){ vec3 d=normalize(vD); float h=d.y*0.5+0.5;
+    vec3 c=mix(vec3(0.003,0.006,0.016),vec3(0.012,0.028,0.066),h);
+    float n=fbm(d*2.2+vec3(uTime*0.010,0.0,uTime*0.006));
+    c+=uTint*pow(n,2.2)*0.6;
+    float m=fbm(d*5.0-vec3(0.0,uTime*0.008,0.0)); c+=vec3(0.05,0.02,0.08)*pow(m,3.0)*0.7;
+    gl_FragColor=vec4(c,1.0); }`,
+}));
+bg.renderOrder = -10; bg.frustumCulled = false; scene.add(bg);
+
+/* =========================================================
+   Partículas (citoplasma y ambiente)
+   ========================================================= */
+const PTS_VS = /* glsl */`
+attribute float aSeed; uniform float uTime, uSize, uSpin, uWob; varying float vA; varying vec3 vL;
+void main(){
+  vec3 p=position; float an=uTime*uSpin*(0.6+0.8*fract(aSeed*7.13)); float c=cos(an), s=sin(an);
+  p.xz=mat2(c,-s,s,c)*p.xz;
+  p+=uWob*vec3(sin(uTime*0.9+aSeed*11.0),cos(uTime*0.7+aSeed*5.0),sin(uTime*0.8+aSeed*3.0));
+  vL=p; vec4 mv=modelViewMatrix*vec4(p,1.0);
+  gl_PointSize=uSize*(0.5+fract(aSeed*3.7))*(260.0/max(-mv.z,0.1));
+  vA=0.35+0.65*fract(aSeed*13.1); gl_Position=projectionMatrix*mv; }`;
+const PTS_FS = /* glsl */`
+uniform vec3 uC, uCut; uniform float uAlpha, uClip, uDim; varying float vA; varying vec3 vL;
+void main(){
+  if(uClip>0.5 && vL.x>uCut.x && vL.y>uCut.y && vL.z>uCut.z) discard;
+  float d=length(gl_PointCoord-0.5); if(d>0.5) discard;
+  float a=smoothstep(0.5,0.0,d); a*=a;
+  gl_FragColor=vec4(uC, a*vA*uAlpha*(1.0-uDim*0.8)); }`;
+function makePoints(positions, o = {}) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const seeds = new Float32Array(positions.length / 3);
+  for (let i = 0; i < seeds.length; i++) seeds[i] = R() * 100;
+  g.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: U.time, uSize: { value: (o.size ?? 3) * DPR }, uSpin: { value: o.spin ?? 0.05 }, uWob: { value: o.wob ?? 0.05 },
+      uC: { value: col(o.color ?? '#9fdcff') }, uAlpha: { value: o.alpha ?? 0.6 }, uClip: { value: o.cutter ? 1 : 0 },
+      uCut: o.cutter ? o.cutter.u : { value: V3(99, 99, 99) }, uHL: { value: 0 }, uDim: { value: 0 },
+    },
+    vertexShader: PTS_VS, fragmentShader: PTS_FS, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const p = new THREE.Points(g, m);
+  p.renderOrder = o.order ?? 5;
+  p.frustumCulled = false;
+  return p;
+}
+{
+  const pos = [];
+  for (let i = 0; i < 900; i++) { randDir(_a).multiplyScalar(rr(10, 46)); pos.push(_a.x, _a.y, _a.z); }
+  scene.add(makePoints(pos, { size: 2.2, spin: 0.004, wob: 0.6, color: '#6fb8ff', alpha: 0.22, order: -5 }));
+}
+
+/* =========================================================
+   Cortes (clipping) animados
+   ========================================================= */
+class Cutter {
+  constructor(closed, open) {
+    this.closed = closed; this.open = open; this.v = closed.clone(); this.t = 0;
+    this.local = [new THREE.Plane(V3(-1, 0, 0), 0), new THREE.Plane(V3(0, -1, 0), 0), new THREE.Plane(V3(0, 0, -1), 0)];
+    this.planes = this.local.map((p) => p.clone());
+    this.u = { value: this.v };
+  }
+  set(t, group) {
+    this.t = t;
+    this.v.lerpVectors(this.closed, this.open, t);
+    this.local[0].constant = this.v.x; this.local[1].constant = this.v.y; this.local[2].constant = this.v.z;
+    for (let i = 0; i < 3; i++) { this.planes[i].copy(this.local[i]); if (group) this.planes[i].applyMatrix4(group.matrixWorld); }
+  }
+  removes(p) { return p.x > this.v.x && p.y > this.v.y && p.z > this.v.z; }
+}
+
+/* =========================================================
+   Registro de células y partes
+   ========================================================= */
+const CELLS = {};
+function makeCell(key, radius) {
+  const c = { key, radius, group: new THREE.Group(), parts: new Map(), pickables: [], cutters: [], caps: [], tick: [] };
+  c.group.name = key;
+  scene.add(c.group);
+  CELLS[key] = c;
+  return c;
+}
+function partOf(cell, id) {
+  let p = cell.parts.get(id);
+  if (!p) { p = { id, mats: new Set(), meshes: [], anchor: null, focus: 6, hl: 0, dim: 0 }; cell.parts.set(id, p); }
+  return p;
+}
+function own(cell, id, obj, opt = {}) {
+  const p = partOf(cell, id);
+  obj.traverse((o) => {
+    if (!(o.isMesh || o.isPoints)) return;
+    o.userData.part = id;
+    if (opt.shell) o.userData.shell = opt.shell;
+    p.meshes.push(o);
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => p.mats.add(m));
+    if (opt.pick !== false && o.isMesh) cell.pickables.push(o);
+  });
+  return obj;
+}
+function anchor(cell, id, a, focus) {
+  const p = partOf(cell, id);
+  p.anchor = a;
+  if (focus) p.focus = focus;
+}
+
+/* =========================================================
+   Materiales
+   ========================================================= */
+function pmat(color, o = {}) {
+  const m = new THREE.MeshPhysicalMaterial({
+    color, roughness: o.rough ?? 0.38, metalness: 0,
+    clearcoat: o.cc ?? 0.55, clearcoatRoughness: o.ccr ?? 0.3,
+    sheen: o.sheen ?? 0.12, sheenRoughness: 0.6, sheenColor: col(o.sheenColor ?? 0xffffff),
+    emissive: col(o.emissive ?? color), emissiveIntensity: o.emi ?? 0.05,
+    envMapIntensity: o.env ?? 0.7, side: o.side ?? THREE.FrontSide,
+    transparent: !!o.transparent, opacity: o.opacity ?? 1, depthWrite: o.depthWrite ?? true,
+    flatShading: !!o.flat, vertexColors: !!o.vcol,
+  });
+  if (o.cutter) { m.clippingPlanes = o.cutter.planes; m.clipIntersection = true; }
+  m.userData.base = { color: m.color.clone(), emi: m.emissiveIntensity, opacity: m.opacity };
+  return m;
+}
+const DIMC = col('#0b1322');
+function applyMat(m, hl, dim) {
+  if (m.isShaderMaterial) {
+    if (m.uniforms.uHL) m.uniforms.uHL.value = hl;
+    if (m.uniforms.uDim) m.uniforms.uDim.value = dim;
+    return;
+  }
+  const b = m.userData.base; if (!b) return;
+  m.color.copy(b.color).lerp(DIMC, dim * 0.8);
+  m.emissiveIntensity = b.emi * (1 - dim) + hl * 0.6;
+  if (m.transparent) m.opacity = b.opacity * (1 - dim * 0.65);
+}
+/* Vibración browniana por instancia (ribosomas, gránulos) */
+function addJitter(m, amp, spd) {
+  const u = { uJA: { value: amp }, uJS: { value: spd } };
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = U.time; Object.assign(sh.uniforms, u);
+    sh.vertexShader = 'uniform float uTime, uJA, uJS;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    #ifdef USE_INSTANCING
+      float jid=float(gl_InstanceID);
+      transformed+=uJA*vec3(sin(uTime*uJS+jid*1.71),sin(uTime*uJS*1.13+jid*2.37),sin(uTime*uJS*0.87+jid*0.93));
+    #endif`);
+  };
+  return m;
+}
+/* Flexión ondulante (cilios, pili) — eje local +Y */
+function addBend(m, o) {
+  const u = { uBL: { value: o.len }, uBA: { value: o.amp }, uBS: { value: o.speed }, uBK: { value: o.k ?? 2.2 } };
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = U.time; Object.assign(sh.uniforms, u);
+    sh.vertexShader = 'uniform float uTime, uBL, uBA, uBS, uBK;\nattribute float aPhase;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      float bs=clamp(position.y/uBL,0.0,1.0); float bph=uTime*uBS+aPhase-bs*uBK;
+      float bb=sin(bph)+0.3*sin(2.0*bph+0.7);
+      transformed.x+=uBA*uBL*bs*bs*bb;
+      transformed.z+=uBA*0.35*uBL*bs*bs*cos(bph);
+      transformed.y-=uBA*uBA*0.25*uBL*bs*bs*bs*abs(bb);`);
+  };
+  return m;
+}
+/* Ondulación lenta de un filamento (ADN) */
+function addWrithe(m, amp, spd) {
+  const u = { uWA: { value: amp }, uWS: { value: spd } };
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = U.time; Object.assign(sh.uniforms, u);
+    sh.vertexShader = 'uniform float uTime, uWA, uWS;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vec3 wq=position*2.3;
+      transformed+=uWA*vec3(sin(wq.y+uTime*uWS)+sin(wq.z*1.3-uTime*uWS*0.7), sin(wq.z+uTime*uWS*1.1)+sin(wq.x*1.2+uTime*uWS*0.6), sin(wq.x+uTime*uWS*0.9)+sin(wq.y*1.4-uTime*uWS*0.8));`);
+  };
+  return m;
+}
+
+/* =========================================================
+   Caras de corte (secciones) con patrón procedural
+   ========================================================= */
+const CAP_VS = /* glsl */`
+attribute float aAxis; varying vec3 vP; varying float vAx;
+void main(){ vP=position; vAx=aAxis; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`;
+const CAP_FS = /* glsl */`
+uniform vec3 uCut, uA, uB, uC1, uC2, uC3; uniform vec4 uRad; uniform vec2 uOff;
+uniform float uMode, uAlpha, uTime, uHL, uDim, uR0;
+varying vec3 vP; varying float vAx;
+${NOISE}${SHAPE_GLSL}
+float segD(vec3 p, vec3 a, vec3 b){ vec3 pa=p-a, ba=b-a; float h=clamp(dot(pa,ba)/max(dot(ba,ba),1e-5),0.0,1.0); return length(pa-ba*h); }
+void main(){
+  if(vP.x<uCut.x-0.002||vP.y<uCut.y-0.002||vP.z<uCut.z-0.002) discard;
+  vec3 q=vP-uA; float d=segD(vP,uA,uB);
+  float f=shapeF(normalize(q+vec3(1e-5)));
+  float rIn=uRad.x*mix(1.0,f,uRad.z)-uOff.x, rOut=uRad.y*mix(1.0,f,uRad.w)-uOff.y;
+  if(d>rOut||d<rIn) discard;
+  float t=(d-rIn)/max(rOut-rIn,1e-4);
+  vec2 uv = vAx<0.5 ? q.yz : (vAx<1.5 ? q.xz : q.xy);
+  float arc=atan(uv.y,uv.x)*d;
+  vec3 N = vAx<0.5 ? vec3(1.,0.,0.) : (vAx<1.5 ? vec3(0.,1.,0.) : vec3(0.,0.,1.));
+  float lit=0.8+0.2*dot(N,normalize(vec3(0.45,0.8,0.55)));
+  vec3 c=uC1; float a=uAlpha;
+  if(uMode<0.5){
+    c=uC1*(0.86+0.28*fbm(vP*6.0));
+  } else if(uMode<1.5){
+    float head=max(smoothstep(0.64,0.84,t),smoothstep(0.36,0.16,t));
+    float bead=smoothstep(0.44,0.2,length(fract(uv/0.05)-0.5));
+    vec3 tails=uC2*(0.88+0.24*vnoise(vec3(uv*60.0,t*4.0)));
+    c=mix(tails,uC1*(0.75+0.45*bead),head);
+    c=mix(c,uC3,smoothstep(0.45,0.5,t)*smoothstep(0.55,0.5,t)*0.5);
+  } else if(uMode<2.5){
+    if(d>uR0){
+      float te=(d-uR0)/max(rOut-uR0,1e-4);
+      float memb=max(step(te,0.36),step(0.64,te));
+      float pk=abs(fract(arc/0.34)-0.5); float pore=step(pk,0.05);
+      c=mix(uC3,uC1,max(memb,pore));
+      if(pore>0.5) c=uC1*1.4;
+    } else {
+      float n1=1.0-abs(vnoise(vP*6.5+vec3(0.0,uTime*0.03,0.0))*2.0-1.0);
+      float n2=1.0-abs(vnoise(vP*13.0-vec3(uTime*0.02))*2.0-1.0);
+      float chrom=pow(n1,7.0)*0.85+pow(n2,9.0)*0.6;
+      float rim=smoothstep(uR0-0.4,uR0-0.02,d)*(0.45+0.55*fbm(vP*9.0));
+      c=mix(uC2*(0.88+0.24*fbm(vP*3.0)),uC3*0.6,clamp(chrom+rim*0.85,0.0,1.0));
+    }
+  } else if(uMode<3.5){
+    float fl=fbm(vP*1.3+vec3(0.0,uTime*0.06,uTime*0.03));
+    float edge=smoothstep(rOut-0.35,rOut,d);
+    c=uC1*(0.7+0.6*fl)+uC2*edge*0.6;
+    a=uAlpha*(0.65+0.7*fl)+edge*0.22;
+    float spk=step(0.985,hash3(floor(vP*42.0))); c+=uC2*spk*0.7; a+=spk*0.25;
+  } else if(uMode<4.5){
+    float fib=vnoise(vec3(uv*22.0,t*3.0)); c=uC1*(0.76+0.42*fib);
+  } else {
+    float g=max(smoothstep(0.86,0.97,abs(sin(uv.x*48.0))),smoothstep(0.86,0.97,abs(sin(uv.y*48.0))));
+    c=uC1*(0.84+0.18*fbm(vP*8.0))+uC2*g*0.4;
+  }
+  c*=lit;
+  c=mix(c,c*0.22+vec3(0.01,0.015,0.03),uDim*0.8);
+  c+=uC1*uHL*0.55;
+  gl_FragColor=vec4(c,clamp(a*(1.0-uDim*0.5),0.0,1.0));
+}`;
+function capGeo(mn, mx) {
+  const pos = new Float32Array(36), ax = new Float32Array(12), idx = [];
+  for (let a = 0; a < 3; a++) {
+    for (let k = 0; k < 4; k++) ax[a * 4 + k] = a;
+    const b = a * 4; idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aAxis', new THREE.BufferAttribute(ax, 1));
+  g.setIndex(idx);
+  g.userData = { mn, mx };
+  return g;
+}
+function syncCap(mesh, v) {
+  const g = mesh.geometry, { mn, mx } = g.userData, P = g.attributes.position.array;
+  let any = false;
+  for (let a = 0; a < 3; a++) {
+    const b = (a + 1) % 3, c = (a + 2) % 3;
+    const fx = v.getComponent(a), lb = Math.max(v.getComponent(b), mn[b]), lc = Math.max(v.getComponent(c), mn[c]);
+    const ok = fx > mn[a] && fx < mx[a] && lb < mx[b] && lc < mx[c];
+    const cs = [[lb, lc], [mx[b], lc], [mx[b], mx[c]], [lb, mx[c]]];
+    for (let k = 0; k < 4; k++) {
+      const o = (a * 4 + k) * 3, p = [0, 0, 0];
+      if (ok) { p[a] = fx; p[b] = cs[k][0]; p[c] = cs[k][1]; }
+      P[o] = p[0]; P[o + 1] = p[1]; P[o + 2] = p[2];
+    }
+    any = any || ok;
+  }
+  g.attributes.position.needsUpdate = true;
+  g.computeBoundingSphere();
+  mesh.visible = any;
+}
+function segDist(p, A, B) {
+  _a.subVectors(B, A); const l2 = _a.lengthSq();
+  const h = l2 > 1e-9 ? clamp01(_b.subVectors(p, A).dot(_a) / l2) : 0;
+  return _c.copy(A).addScaledVector(_a, h).distanceTo(p);
+}
+function makeCap(cell, cutter, o) {
+  const A = o.A || V3(), B = o.B || A;
+  const u = {
+    uCut: cutter.u, uA: { value: A }, uB: { value: B },
+    uRad: { value: new THREE.Vector4(o.rIn ?? 0, o.rOut, o.irrIn ? 1 : 0, o.irrOut ? 1 : 0) },
+    uOff: { value: new THREE.Vector2(o.offIn ?? 0, o.offOut ?? 0) },
+    uMode: { value: o.mode ?? 0 }, uAlpha: { value: o.alpha ?? 1 }, uTime: U.time,
+    uHL: { value: 0 }, uDim: { value: 0 }, uR0: { value: o.r0 ?? 0 },
+    uC1: { value: col(o.c1) }, uC2: { value: col(o.c2 ?? o.c1) }, uC3: { value: col(o.c3 ?? o.c1) },
+  };
+  const m = new THREE.ShaderMaterial({
+    uniforms: u, vertexShader: CAP_VS, fragmentShader: CAP_FS, side: THREE.DoubleSide,
+    transparent: (o.alpha ?? 1) < 1, depthWrite: o.depthWrite ?? true,
+  });
+  const mesh = new THREE.Mesh(capGeo(o.mn, o.mx), m);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = o.order ?? 0;
+  mesh.userData.cutter = cutter;
+  mesh.userData.test = (p) => {
+    const d = segDist(p, A, B);
+    const f = shapeF(_d.subVectors(p, A).normalize());
+    const rIn = (o.rIn ?? 0) * (o.irrIn ? f : 1) - (o.offIn ?? 0);
+    const rOut = o.rOut * (o.irrOut ? f : 1) - (o.offOut ?? 0);
+    return d >= rIn && d <= rOut;
+  };
+  cell.caps.push(mesh);
+  cell.group.add(mesh);
+  return mesh;
+}
+
+/* =========================================================
+   Geometría auxiliar
+   ========================================================= */
+function shapedSphere(rad, ws, hs) {
+  const g = new THREE.SphereGeometry(1, ws, hs);
+  const P = g.attributes.position, Nn = g.attributes.normal;
+  const n = V3(), t1 = V3(), t2 = V3(), a = V3(), b = V3(), c = V3(), up = V3(0, 1, 0), alt = V3(1, 0, 0);
+  const surf = (d, out) => { out.copy(d).normalize(); return out.multiplyScalar(rad * shapeF(out)); };
+  for (let i = 0; i < P.count; i++) {
+    n.fromBufferAttribute(P, i).normalize();
+    t1.crossVectors(n, Math.abs(n.y) < 0.99 ? up : alt).normalize();
+    t2.crossVectors(n, t1);
+    surf(n, a);
+    surf(b.copy(n).addScaledVector(t1, 0.01), b);
+    surf(c.copy(n).addScaledVector(t2, 0.01), c);
+    b.sub(a); c.sub(a);
+    const nn = b.cross(c).normalize(); if (nn.dot(n) < 0) nn.negate();
+    P.setXYZ(i, a.x, a.y, a.z); Nn.setXYZ(i, nn.x, nn.y, nn.z);
+  }
+  g.computeBoundingSphere();
+  return g;
+}
+function paramSurface(fn, nu, nv) {
+  const pos = [], uv = [], idx = [], p = V3();
+  for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { fn(i / nu, j / nv, p); pos.push(p.x, p.y, p.z); uv.push(i / nu, j / nv); }
+  for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
+    const a = j * (nu + 1) + i, b = a + 1, c = a + nu + 1, d = c + 1;
+    idx.push(a, c, b, b, c, d);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+function tubeGeo(points, segs, radius, radial = 6, closed = false) {
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points, closed, 'catmullrom', 0.5), segs, radius, radial, closed);
+}
+function merge(geos) {
+  const g = mergeGeometries(geos, false);
+  geos.forEach((x) => x.dispose());
+  return g;
+}
+function floatAttr(g, name, v) {
+  const n = g.attributes.position.count, arr = new Float32Array(n).fill(v);
+  g.setAttribute(name, new THREE.BufferAttribute(arr, 1));
+  return g;
+}
+function stadiumInto(p, r, hL) {
+  p.moveTo(r, -hL); p.lineTo(r, hL);
+  p.absarc(0, hL, r, 0, Math.PI, false);
+  p.lineTo(-r, -hL);
+  p.absarc(0, -hL, r, Math.PI, TAU, false);
+  return p;
+}
+function basisQuat(x, y, z) { return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z)); }
+function alignQuat(dir) { return new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), _d.copy(dir).normalize()); }
+
+/* =========================================================
+   Selección por rayos
+   ========================================================= */
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+const _loc = V3();
+function visibleChain(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
+function pickAt(cell, x, y) {
+  ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObjects(cell.pickables, false);
+  let glass = null;
+  for (const h of hits) {
+    const o = h.object;
+    if (!visibleChain(o)) continue;
+    _loc.copy(h.point); cell.group.worldToLocal(_loc);
+    if (o.userData.test) { if (!o.userData.test(_loc)) continue; }
+    else if (o.userData.cutter && o.userData.cutter.removes(_loc)) continue;
+    if (o.userData.shell === 'glass') { if (!glass) glass = h; continue; }
+    return { id: o.userData.part, point: h.point };
+  }
+  return glass ? { id: glass.object.userData.part, point: glass.point } : null;
+}
+
+
+/* =========================================================
+   CÉLULA EUCARIOTA (animal) — parte 1
+   Membrana, citoplasma, núcleo, retículo y ribosomas
+   ========================================================= */
+const CAM0 = V3(9.6, 7.0, 12.6).normalize();
+const inOct = (p) => p.x > 0 && p.y > 0 && p.z > 0;
+const surfPt = (d, k = 1) => { const n = d.clone().normalize(); return n.multiplyScalar(5 * shapeF(n) * k); };
+
+const MEM_VS = /* glsl */`
+varying vec3 vN; varying vec3 vW; varying vec3 vL;
+void main(){ vL=position; vec4 w=modelMatrix*vec4(position,1.0); vW=w.xyz; vN=normalize(mat3(modelMatrix)*normal);
+  gl_Position=projectionMatrix*viewMatrix*w; }`;
+const MEM_FS = /* glsl */`
+uniform vec3 uCut, uC1, uC2, uC3; uniform float uTime, uBack, uHL, uDim;
+varying vec3 vN, vW, vL;
+${NOISE}
+void main(){
+  if(vL.x>uCut.x && vL.y>uCut.y && vL.z>uCut.z) discard;
+  vec3 V=normalize(cameraPosition-vW); vec3 N=normalize(vN); if(uBack>0.5) N=-N;
+  float n1=vnoise(vL*2.2+vec3(0.0,uTime*0.25,0.0));
+  float n2=vnoise(vL*6.0-vec3(uTime*0.12));
+  float n3=vnoise(vL*3.1+vec3(5.0,uTime*0.18,2.0));
+  N=normalize(N+0.2*vec3(n1-0.5,n2-0.5,n3-0.5));
+  float ndv=clamp(abs(dot(N,V)),0.0,1.0); float fr=pow(1.0-ndv,2.3);
+  vec3 L=normalize(vec3(0.5,0.8,0.6)); vec3 H=normalize(L+V);
+  float spec=pow(max(dot(N,H),0.0),80.0); float dif=max(dot(N,L),0.0);
+  float spots=smoothstep(0.64,0.76,vnoise(vL*5.5));
+  vec3 c; float a;
+  if(uBack>0.5){ c=mix(uC3,uC1*0.55,0.3+0.4*n1)*(0.5+0.5*dif)+uC2*spots*0.12; a=0.36+0.18*spots; }
+  else { c=mix(uC1*(0.22+0.4*dif),uC2*0.85,fr*0.9)+vec3(spec)*0.8+uC2*spots*0.06; a=clamp(0.05+0.72*fr+spec*0.5+spots*0.05,0.0,0.86); }
+  c=mix(c,c*0.3,uDim*0.7); c+=uC2*uHL*0.5*(0.35+fr);
+  a=clamp(a*(1.0-uDim*0.5)+uHL*0.12,0.0,1.0);
+  gl_FragColor=vec4(c,a);
+}`;
+
+function eukMembrane(cell, cut, E) {
+  const g = cell.group;
+  const geo = shapedSphere(5, 168, 112);
+  const shared = {
+    uCut: cut.u, uTime: U.time, uHL: { value: 0 }, uDim: { value: 0 },
+    uC1: { value: col('#2f8fd8') }, uC2: { value: col('#9fdcff') }, uC3: { value: col('#0f3d6e') },
+  };
+  const mk = (back) => new THREE.ShaderMaterial({
+    uniforms: { ...shared, uBack: { value: back ? 1 : 0 } }, vertexShader: MEM_VS, fragmentShader: MEM_FS,
+    transparent: true, depthWrite: false, side: back ? THREE.BackSide : THREE.FrontSide,
+  });
+  const back = new THREE.Mesh(geo, mk(true)); back.renderOrder = 1;
+  const front = new THREE.Mesh(geo, mk(false)); front.renderOrder = 4;
+  back.userData.cutter = cut; front.userData.cutter = cut;
+  g.add(back, front);
+  own(cell, 'membrana', back, { shell: 'glass' });
+  own(cell, 'membrana', front, { shell: 'glass' });
+
+  const rim = makeCap(cell, cut, { rIn: 5, rOut: 5, irrIn: 1, irrOut: 1, offIn: 0.2, mode: 1,
+    c1: '#ffae78', c2: '#ffe6ae', c3: '#e0875a', mn: [-6, -6, -6], mx: [6, 6, 6] });
+  own(cell, 'membrana', rim);
+
+  /* Proteínas de membrana (canales, receptores, glicoproteínas) */
+  const N = 190, pm = pmat('#ffffff', { cutter: cut, cc: 0.7, rough: 0.35, emi: 0.05 });
+  const prot = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.04, 0.11, 4, 8), pm, N);
+  const M = new THREE.Matrix4(), palette = ['#ffd27a', '#ffb08a', '#9be7ff'].map(col);
+  let i = 0, guard = 0;
+  while (i < N && guard++ < 5000) {
+    const n = randDir(V3());
+    if (n.dot(E.ciliaDir) > 0.85) continue;
+    const s = surfPt(n, 0.997);
+    M.compose(s, alignQuat(n), _b.set(1, rr(0.8, 1.35), 1));
+    prot.setMatrixAt(i, M);
+    prot.setColorAt(i, palette[Math.floor(R() * palette.length)]);
+    i++;
+  }
+  prot.count = i;
+  g.add(prot);
+  own(cell, 'membrana', prot);
+  anchor(cell, 'membrana', surfPt(V3(-0.35, 0.5, 0.79)), 9.5);
+
+  /* Citoplasma: caras de corte translúcidas + partículas en flujo */
+  const cyto = makeCap(cell, cut, { rIn: 1.87, rOut: 5, irrOut: 1, offOut: 0.2, mode: 3,
+    c1: '#0f4f86', c2: '#5fb8ec', alpha: 0.12, order: 3, mn: [-6, -6, -6], mx: [6, 6, 6] });
+  own(cell, 'citoplasma', cyto, { shell: 'glass' });
+  const pos = [];
+  for (let k = 0; k < 1400; k++) { randDir(_a).multiplyScalar(rr(1.98, 4.35)); pos.push(_a.x, _a.y, _a.z); }
+  const pts = makePoints(pos, { cutter: cut, size: 2.2, alpha: 0.3, spin: 0.05, wob: 0.05, color: '#a6e6ff', order: 5 });
+  g.add(pts);
+  own(cell, 'citoplasma', pts, { pick: false });
+  anchor(cell, 'citoplasma', V3(3.3, 0.0, 1.05), 8);
+}
+
+function eukNucleus(cell, cut, E) {
+  const g = cell.group;
+  const env = new THREE.Mesh(new THREE.SphereGeometry(1.85, 96, 64),
+    pmat('#9256dc', { cutter: cut, cc: 0.9, rough: 0.32, sheen: 0.25, sheenColor: '#e6c8ff', emi: 0.06 }));
+  g.add(env);
+  own(cell, 'nucleo', env);
+
+  /* Poros nucleares */
+  const N = 150, zA = V3(0, 0, 1), M = new THREE.Matrix4(), one = V3(1, 1, 1), n = V3();
+  const pores = new THREE.InstancedMesh(new THREE.TorusGeometry(0.075, 0.026, 8, 18), pmat('#e2c2ff', { cutter: cut, emi: 0.15 }), N);
+  const plugs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.034, 8, 6), pmat('#3a1a66', { cutter: cut }), N);
+  for (let i = 0; i < N; i++) {
+    const y = 1 - (2 * (i + 0.5)) / N, rad = Math.sqrt(1 - y * y), th = i * 2.39996;
+    n.set(Math.cos(th) * rad, y, Math.sin(th) * rad);
+    const q = new THREE.Quaternion().setFromUnitVectors(zA, n);
+    M.compose(_a.copy(n).multiplyScalar(1.858), q, one); pores.setMatrixAt(i, M);
+    M.compose(_a.copy(n).multiplyScalar(1.85), q, one); plugs.setMatrixAt(i, M);
+  }
+  g.add(pores, plugs);
+  own(cell, 'envoltura', pores);
+  own(cell, 'envoltura', plugs);
+
+  /* Secciones del núcleo: doble membrana y nucleoplasma con cromatina */
+  const capEnv = makeCap(cell, cut, { rIn: 1.70, rOut: 1.85, r0: 1.70, mode: 2,
+    c1: '#a77bf0', c2: '#9a6ae0', c3: '#2e0d57', mn: [-2, -2, -2], mx: [2, 2, 2] });
+  const capChr = makeCap(cell, cut, { rIn: 0, rOut: 1.70, r0: 1.70, mode: 2,
+    c1: '#a77bf0', c2: '#8d5fd6', c3: '#2e0d57', mn: [-2, -2, -2], mx: [2, 2, 2] });
+  own(cell, 'envoltura', capEnv);
+  own(cell, 'cromatina', capChr);
+
+  /* Nucléolo granular */
+  let ng = new THREE.IcosahedronGeometry(0.62, 14);
+  ng.deleteAttribute('normal'); ng.deleteAttribute('uv');
+  ng = mergeVertices(ng);
+  const P = ng.attributes.position;
+  for (let i = 0; i < P.count; i++) {
+    _a.fromBufferAttribute(P, i);
+    const k = 1 + 0.06 * Math.sin(9 * _a.x + 1) * Math.sin(8 * _a.y + 2) * Math.sin(7 * _a.z + 3) + 0.035 * Math.sin(17 * _a.x + 13 * _a.y + 11 * _a.z);
+    _a.multiplyScalar(k); P.setXYZ(i, _a.x, _a.y, _a.z);
+  }
+  ng.computeVertexNormals();
+  const nucleolus = new THREE.Group();
+  nucleolus.position.set(0.32, 0.3, 0.32);
+  const core = new THREE.Mesh(ng, pmat('#3b2fd0', { emissive: '#5a4dff', emi: 0.2, rough: 0.55, cc: 0.4, sheen: 0.8, sheenColor: '#a49bff' }));
+  const NG = 170, gran = new THREE.InstancedMesh(new THREE.SphereGeometry(0.042, 8, 6), pmat('#7468ff', { emi: 0.35 }), NG);
+  for (let i = 0; i < NG; i++) {
+    const d = randDir(V3());
+    M.compose(d.multiplyScalar(0.62 * rr(0.97, 1.05)), new THREE.Quaternion(), _b.setScalar(rr(0.7, 1.3)));
+    gran.setMatrixAt(i, M);
+  }
+  nucleolus.add(core, gran);
+  g.add(nucleolus);
+  own(cell, 'nucleolo', nucleolus);
+  E.nucleolus = nucleolus;
+  cell.tick.push((t) => { nucleolus.rotation.y = t * 0.12; nucleolus.rotation.x = Math.sin(t * 0.2) * 0.2; });
+
+  /* El "núcleo" agrupa visualmente a todas sus subpartes */
+  const pn = partOf(cell, 'nucleo');
+  [pores, plugs, capEnv, capChr, core, gran].forEach((o) => pn.mats.add(o.material));
+
+  anchor(cell, 'nucleo', V3(-0.45, 0.62, 0.64).normalize().multiplyScalar(1.86), 6);
+  anchor(cell, 'envoltura', V3(1.25, 1.27, 0.0), 4.2);
+  anchor(cell, 'nucleolo', V3(0.68, 0.66, 0.68), 3.6);
+  anchor(cell, 'cromatina', V3(0.0, 1.15, 0.85), 4.2);
+}
+
+function eukRER(cell, cut, E) {
+  const geos = [], ribos = [];
+  /* Cisternas en bandas apiladas alrededor del núcleo, con huecos entre ellas */
+  const bands = [[0.95, 0.15], [1.35, 0.15], [1.75, 0.15], [2.15, 0.14]];
+  for (let k = 0; k < 4; k++) {
+    const rk = 2.13 + k * 0.23;
+    bands.forEach(([tc, hw], b) => {
+      const p0 = -1.45 + k * 0.06 + b * 0.12, p1 = 2.35 - k * 0.08 - b * 0.1;
+      const t0 = tc - hw + k * 0.01, t1 = tc + hw - k * 0.01;
+      const fn = (u, v, p) => {
+        const ph = p0 + (p1 - p0) * u, th = t0 + (t1 - t0) * v;
+        const e = Math.pow(Math.sin(Math.PI * u), 0.4);
+        const r = rk + (0.07 * Math.sin(ph * 9 + k * 1.7 + b * 2.1) + 0.03 * Math.sin(th * 11 + ph * 3)) * e;
+        return sph(r, th, ph, p);
+      };
+      geos.push(paramSurface(fn, 130, 12));
+      for (const v of [0, 1]) {
+        const pts = [];
+        for (let i = 0; i <= 70; i++) pts.push(fn(i / 70, v, V3()));
+        geos.push(tubeGeo(pts, 140, 0.034, 6));
+      }
+      for (let i = 0; i < 190; i++) {
+        const p = fn(rr(0.02, 0.98), rr(0.05, 0.95), V3());
+        const nn = p.clone().normalize();
+        ribos.push(p.addScaledVector(nn, (R() < 0.5 ? -1 : 1) * 0.048));
+      }
+    });
+  }
+  const mesh = new THREE.Mesh(merge(geos),
+    pmat('#e0607f', { side: THREE.DoubleSide, cutter: cut, cc: 0.6, rough: 0.34, sheen: 0.3, sheenColor: '#ffb8cb', emi: 0.05 }));
+  cell.group.add(mesh);
+  own(cell, 'rer', mesh);
+  E.rerRibos = ribos;
+  anchor(cell, 'rer', V3(2.52, 0.57, 0.02), 6.5);
+}
+
+function eukSER(cell, cut, E) {
+  const nodes = [];
+  let guard = 0;
+  while (nodes.length < 18 && guard++ < 3000) {
+    const p = sph(rr(3.1, 3.95), rr(0.9, 2.35), rr(1.95, 3.85));
+    if (nodes.every((q) => q.distanceTo(p) > 0.55)) nodes.push(p);
+  }
+  const geos = [], seen = new Set();
+  nodes.forEach((a, i) => {
+    const near = nodes.map((b, j) => [j, a.distanceTo(b)]).filter(([j]) => j !== i).sort((x, y) => x[1] - y[1]).slice(0, 3);
+    near.forEach(([j, dd], idx) => {
+      if (dd > 1.45 && idx > 0) return;
+      const key = i < j ? i + '_' + j : j + '_' + i;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const b = nodes[j];
+      const mid = a.clone().lerp(b, 0.5).add(randDir(V3()).multiplyScalar(0.18));
+      if (mid.length() > 4.15) mid.setLength(4.15);
+      geos.push(tubeGeo([a, mid, b], 26, 0.062, 7));
+    });
+    geos.push(new THREE.SphereGeometry(0.09, 12, 10).translate(a.x, a.y, a.z));
+  });
+  const mesh = new THREE.Mesh(merge(geos),
+    pmat('#b9d44f', { cutter: cut, cc: 0.75, rough: 0.3, sheen: 0.25, sheenColor: '#f3ffc4', emi: 0.06 }));
+  cell.group.add(mesh);
+  own(cell, 'rel', mesh);
+  E.ser = nodes;
+  const c = nodes.reduce((s, p) => s.add(p.clone()), V3()).multiplyScalar(1 / nodes.length);
+  anchor(cell, 'rel', nodes.slice().sort((p, q) => p.distanceTo(c) - q.distanceTo(c))[0].clone(), 6.5);
+}
+
+function eukRibosomes(cell, cut, E) {
+  const geo = new THREE.IcosahedronGeometry(0.03, 1);
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion();
+  const build = (list, mat) => {
+    const im = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach((p, i) => { const s = rr(0.8, 1.2); M.compose(p, q, _b.set(s, s * 0.82, s)); im.setMatrixAt(i, M); });
+    cell.group.add(im);
+    return im;
+  };
+  const bound = build(E.rerRibos, addJitter(pmat('#2e3190', { cutter: cut, rough: 0.42, cc: 0.3, emi: 0.12, emissive: '#4b4fe0' }), 0.006, 2.0));
+  const free = [];
+  for (let i = 0; i < 1300; i++) free.push(randDir(V3()).multiplyScalar(rr(2.05, 4.3)));
+  for (let c = 0; c < 36; c++) {
+    const o = randDir(V3()).multiplyScalar(rr(3.0, 4.1)), dir = randDir(V3());
+    const side = V3().crossVectors(dir, V3(0.3, 1, 0.2)).normalize(), up = V3().crossVectors(dir, side);
+    for (let k = 0; k < 8; k++) {
+      const a = k * 0.9;
+      free.push(o.clone().addScaledVector(dir, k * 0.065).addScaledVector(side, Math.cos(a) * 0.05).addScaledVector(up, Math.sin(a) * 0.05));
+    }
+  }
+  const freeM = build(free, addJitter(pmat('#2e3190', { cutter: cut, rough: 0.42, cc: 0.3, emi: 0.12, emissive: '#4b4fe0' }), 0.014, 2.4));
+  own(cell, 'ribosomas', bound);
+  own(cell, 'ribosomas', freeM);
+  partOf(cell, 'rer').mats.add(bound.material);
+  let best = free[0], bs = -9;
+  for (const p of free) {
+    if (inOct(p) || p.length() < 3.7) continue;
+    const s = _a.copy(p).normalize().dot(CAM0);
+    if (s > bs) { bs = s; best = p; }
+  }
+  anchor(cell, 'ribosomas', best.clone(), 2.6);
+}
+
+
+/* =========================================================
+   CÉLULA EUCARIOTA — parte 2
+   Golgi, mitocondrias, lisosomas, peroxisomas, vesículas,
+   centrosoma, citoesqueleto y cilios
+   ========================================================= */
+function place(E, r, tries, gen) {
+  for (let i = 0; i < tries; i++) {
+    const p = gen();
+    if (E.occ.every((o) => o.c.distanceTo(p) > o.r + r)) { E.occ.push({ c: p, r }); return p; }
+  }
+  return null;
+}
+function lumpyGeo(r, amt = 0.08, det = 3) {
+  let g = new THREE.IcosahedronGeometry(r, det);
+  g.deleteAttribute('normal'); g.deleteAttribute('uv');
+  g = mergeVertices(g);
+  const P = g.attributes.position, s = rr(0, 10);
+  for (let i = 0; i < P.count; i++) {
+    _a.fromBufferAttribute(P, i);
+    const k = 1 + amt * Math.sin(_a.x * 11 / r * 0.3 + s) * Math.sin(_a.y * 13 / r * 0.3 + s * 2) * Math.sin(_a.z * 9 / r * 0.3 + s * 3);
+    _a.multiplyScalar(k); P.setXYZ(i, _a.x, _a.y, _a.z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+function drift(cell, obj, amp = 0.07, rot = 0.15) {
+  const p0 = obj.position.clone(), q0 = obj.quaternion.clone(), s = R() * 10;
+  cell.tick.push((t) => {
+    obj.position.copy(p0).add(_a.set(Math.sin(t * 0.31 + s), Math.sin(t * 0.27 + s * 1.3), Math.sin(t * 0.35 + s * 0.7)).multiplyScalar(amp));
+    obj.quaternion.copy(q0);
+    obj.rotateY(Math.sin(t * 0.4 + s) * rot);
+    obj.rotateX(Math.sin(t * 0.33 + s * 2) * rot * 0.7);
+  });
+}
+
+function eukGolgi(cell, cut, E, G) {
+  const grp = new THREE.Group();
+  grp.position.copy(G);
+  grp.quaternion.copy(alignQuat(G));
+  const prof = [[0, 0.03], [0.5, 0.03], [0.74, 0.036], [0.88, 0.062], [0.96, 0.05], [1.0, 0.0], [0.96, -0.05], [0.88, -0.062], [0.74, -0.036], [0.5, -0.03], [0, -0.03]]
+    .map(([x, y]) => new THREE.Vector2(x, y));
+  const cols = ['#ffd166', '#ffc15e', '#ffb056', '#ff9d4d', '#ff8a45', '#ff7a3d'];
+  const bowl = (x, z) => 0.32 * (x * x * 0.55 + z * z * 0.9);
+  const dims = [];
+  for (let i = 0; i < 6; i++) {
+    let lg = new THREE.LatheGeometry(prof, 44);
+    lg.deleteAttribute('normal'); lg.deleteAttribute('uv');
+    lg = mergeVertices(lg);
+    const a = 0.92 - Math.abs(i - 2.5) * 0.07, b = a * 0.58, y0 = (i - 2.5) * 0.13;
+    dims.push([a, b, y0]);
+    const P = lg.attributes.position;
+    for (let k = 0; k < P.count; k++) {
+      let x = P.getX(k) * a, y = P.getY(k), z = P.getZ(k) * b;
+      const w = 1 + 0.06 * Math.sin(Math.atan2(z, x) * 5 + i);
+      x *= w; z *= w;
+      P.setXYZ(k, x, y + y0 + bowl(x, z), z);
+    }
+    lg.computeVertexNormals();
+    grp.add(new THREE.Mesh(lg, pmat(cols[i], { cc: 0.7, rough: 0.3, sheen: 0.3, sheenColor: '#fff0c8', emi: 0.05, side: THREE.DoubleSide })));
+  }
+  const vm = pmat('#ffc078', { cc: 0.8, rough: 0.25, emi: 0.1 });
+  for (let k = 0; k < 20; k++) {
+    const [a, b, y0] = dims[Math.floor(R() * 6)], t = rr(0, TAU), x = a * 1.08 * Math.cos(t), z = b * 1.08 * Math.sin(t);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(rr(0.05, 0.08), 14, 10), vm);
+    m.position.set(x, y0 + bowl(x, z) + rr(-0.04, 0.04), z);
+    grp.add(m);
+  }
+  cell.group.add(grp);
+  own(cell, 'golgi', grp);
+  E.golgi = grp;
+  cell.tick.push((t) => { grp.scale.set(1 + 0.015 * Math.sin(t * 0.9), 1 + 0.04 * Math.sin(t * 1.3), 1 + 0.015 * Math.cos(t * 0.9)); });
+  anchor(cell, 'golgi', G.clone().addScaledVector(G.clone().normalize(), 0.36), 4.2);
+}
+
+function mitoGeo(L, r) {
+  const hL = L / 2 - r, pts = [];
+  for (let i = 0; i <= 10; i++) { const a = -Math.PI / 2 + (i / 10) * (Math.PI / 2); pts.push(new THREE.Vector2(r * Math.cos(a), -hL + r * Math.sin(a))); }
+  for (let i = 0; i <= 10; i++) { const a = (i / 10) * (Math.PI / 2); pts.push(new THREE.Vector2(r * Math.cos(a), hL + r * Math.sin(a))); }
+  const shell = new THREE.LatheGeometry(pts, 26, 0, Math.PI);
+  const ringS = stadiumInto(new THREE.Shape(), r, hL);
+  ringS.holes.push(stadiumInto(new THREE.Path(), r - 0.045, hL));
+  const ring = new THREE.ShapeGeometry(ringS, 20).rotateY(Math.PI / 2);
+  const wallS = stadiumInto(new THREE.Shape(), r - 0.075, hL);
+  wallS.holes.push(stadiumInto(new THREE.Path(), r - 0.11, hL));
+  const parts = [new THREE.ExtrudeGeometry(wallS, { depth: 0.55 * r, bevelEnabled: false, curveSegments: 16 }).rotateY(Math.PI / 2)];
+  const ri = r - 0.095, span = 2 * hL + r * 0.9, nF = Math.max(5, Math.round(span / 0.115));
+  for (let i = 0; i < nF; i++) {
+    const y = -hL - r * 0.45 + (i + 0.5) * (span / nF);
+    const ay = Math.abs(y), xmax = ay > hL ? Math.sqrt(Math.max(ri * ri - (ay - hL) * (ay - hL), 0)) : ri;
+    if (xmax < 0.09) continue;
+    const s = i % 2 ? 1 : -1, len = 2 * xmax * rr(0.5, 0.68), t = 0.034, x0 = s * (xmax + 0.012);
+    const sh = new THREE.Shape();
+    sh.moveTo(x0, y - t / 2);
+    sh.lineTo(x0 - s * len, y - t / 2 + 0.008 * s);
+    sh.quadraticCurveTo(x0 - s * (len + t), y, x0 - s * len, y + t / 2);
+    sh.lineTo(x0, y + t / 2);
+    sh.closePath();
+    parts.push(new THREE.ExtrudeGeometry(sh, { depth: 0.5 * r, bevelEnabled: false, curveSegments: 4 }).rotateY(Math.PI / 2));
+  }
+  const inner = merge(parts);
+  const matrix = new THREE.ShapeGeometry(stadiumInto(new THREE.Shape(), r - 0.11, hL), 20).rotateY(Math.PI / 2).translate(0.035, 0, 0);
+  return { shell, ring, inner, matrix };
+}
+
+function eukMito(cell, cut, E) {
+  const mOut = pmat('#e5484d', { side: THREE.DoubleSide, cc: 0.85, rough: 0.3, sheen: 0.3, sheenColor: '#ffc2c2', emi: 0.08 });
+  const mRim = pmat('#ff7a85', { cc: 0.5, emi: 0.12, side: THREE.DoubleSide });
+  const mIn = pmat('#ffd1d6', { cc: 0.4, rough: 0.45, emi: 0.1, side: THREE.DoubleSide });
+  const mMat = pmat('#9d2342', { rough: 0.6, cc: 0.2, emi: 0.14, side: THREE.DoubleSide });
+  const vars = [mitoGeo(1.35, 0.3), mitoGeo(1.1, 0.27), mitoGeo(1.6, 0.31)];
+  const list = [V3(3.25, 0.75, 0.66)];
+  E.occ.push({ c: list[0], r: 0.78 });
+  for (let i = 0; i < 11; i++) {
+    const p = place(E, 0.78, 500, () => sph(rr(3.2, 3.85), rr(0.55, 2.6), rr(0, TAU)));
+    if (p) list.push(p);
+  }
+  list.forEach((p, i) => {
+    const v = vars[i % 3], grp = new THREE.Group();
+    grp.add(new THREE.Mesh(v.shell, mOut), new THREE.Mesh(v.ring, mRim), new THREE.Mesh(v.inner, mIn), new THREE.Mesh(v.matrix, mMat));
+    const D = p.clone().normalize().multiplyScalar(0.6).add(CAM0.clone().multiplyScalar(0.8)).add(randDir(V3()).multiplyScalar(0.3)).normalize();
+    const X = D.clone().negate(), Y = randDir(V3());
+    Y.addScaledVector(X, -Y.dot(X)).normalize();
+    const Z = X.clone().cross(Y);
+    grp.quaternion.copy(basisQuat(X, Y, Z));
+    grp.position.copy(p);
+    cell.group.add(grp);
+    own(cell, 'mitocondrias', grp);
+    drift(cell, grp, 0.07, 0.12);
+    if (i === 0) anchor(cell, 'mitocondrias', grp, 3.4);
+  });
+}
+
+function eukLysoPerox(cell, cut, E) {
+  const lS = pmat('#ffd166', { transparent: true, opacity: 0.45, cc: 1, rough: 0.12, emi: 0.12 });
+  const lC = pmat('#e39a1c', { rough: 0.5, emi: 0.18, sheen: 0.4 });
+  const pS = pmat('#86e08f', { transparent: true, opacity: 0.45, cc: 1, rough: 0.12, emi: 0.1 });
+  const pC = pmat('#1f9e6e', { flat: true, rough: 0.35, emi: 0.22, cc: 0.6 });
+  const lyso = [V3(1.2, 3.2, 0.9)], perox = [V3(1.0, 0.9, 3.3)];
+  E.occ.push({ c: lyso[0], r: 0.32 }, { c: perox[0], r: 0.3 });
+  for (let i = 0; i < 6; i++) { const p = place(E, 0.32, 400, () => randDir(V3()).multiplyScalar(rr(2.9, 4.0))); if (p) lyso.push(p); }
+  for (let i = 0; i < 5; i++) { const p = place(E, 0.28, 400, () => randDir(V3()).multiplyScalar(rr(2.9, 4.0))); if (p) perox.push(p); }
+  lyso.forEach((p, i) => {
+    const r = i === 0 ? 0.26 : rr(0.17, 0.27), g = new THREE.Group();
+    const sh = new THREE.Mesh(new THREE.SphereGeometry(r, 28, 20), lS); sh.renderOrder = 2;
+    g.add(sh, new THREE.Mesh(lumpyGeo(r * 0.68, 0.12), lC));
+    for (let k = 0; k < 5; k++) {
+      const d = new THREE.Mesh(new THREE.SphereGeometry(r * 0.12, 8, 6), lC);
+      d.position.copy(randDir(V3()).multiplyScalar(r * 0.78)); g.add(d);
+    }
+    g.position.copy(p);
+    cell.group.add(g); own(cell, 'lisosomas', g); drift(cell, g, 0.09, 0.3);
+    if (i === 0) anchor(cell, 'lisosomas', g, 2.6);
+  });
+  perox.forEach((p, i) => {
+    const r = i === 0 ? 0.24 : rr(0.16, 0.23), g = new THREE.Group();
+    const sh = new THREE.Mesh(new THREE.SphereGeometry(r, 28, 20), pS); sh.renderOrder = 2;
+    const core = new THREE.Mesh(new THREE.OctahedronGeometry(r * 0.52, 0), pC);
+    g.add(sh, core);
+    g.position.copy(p);
+    cell.group.add(g); own(cell, 'peroxisomas', g); drift(cell, g, 0.08, 0.3);
+    const s = R() * 5;
+    cell.tick.push((t) => { core.rotation.set(t * 0.5 + s, t * 0.35, 0); });
+    if (i === 0) anchor(cell, 'peroxisomas', g, 2.6);
+  });
+  E.lyso = lyso;
+}
+
+function eukVesicles(cell, cut, E, G) {
+  const vm = pmat('#bfe4ff', { transparent: true, opacity: 0.6, cc: 1, rough: 0.1, emi: 0.15 });
+  const cm = pmat('#ff8fb1', { emi: 0.35 });
+  const out = G.clone().normalize();
+  const memTarget = () => {
+    for (let k = 0; k < 60; k++) {
+      const p = surfPt(G.clone().normalize().add(randDir(V3()).multiplyScalar(0.9)), 0.94);
+      if (!inOct(p)) return p;
+    }
+    return surfPt(V3(0.5, -0.4, 0.75), 0.94);
+  };
+  const ves = [];
+  const mk = (kind) => {
+    let pts;
+    if (kind === 0) {
+      const a = G.clone().multiplyScalar(0.8).add(randDir(V3()).multiplyScalar(0.4));
+      pts = [a, G.clone().addScaledVector(out, -0.2).add(randDir(V3()).multiplyScalar(0.25)), G.clone().addScaledVector(out, -0.35)];
+    } else if (kind === 1) {
+      const a = G.clone().addScaledVector(out, 0.42).add(randDir(V3()).multiplyScalar(0.3)), b = memTarget();
+      pts = [a, a.clone().lerp(b, 0.5).add(randDir(V3()).multiplyScalar(0.4)), b];
+    } else {
+      const a = surfPt(randDir(V3()), 0.93), b = E.lyso[Math.floor(R() * E.lyso.length)].clone();
+      pts = [a, a.clone().lerp(b, 0.5).add(randDir(V3()).multiplyScalar(0.5)), b];
+    }
+    pts.forEach((p) => { if (p.length() < 2.05) p.setLength(2.05); });
+    return new THREE.CatmullRomCurve3(pts);
+  };
+  for (let i = 0; i < 15; i++) {
+    const kind = i < 4 ? 0 : i < 12 ? 1 : 2, r = rr(0.065, 0.1), g = new THREE.Group();
+    const sh = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12), vm); sh.renderOrder = 2;
+    g.add(sh, new THREE.Mesh(new THREE.SphereGeometry(r * 0.45, 10, 8), cm));
+    cell.group.add(g); own(cell, 'vesiculas', g);
+    ves.push({ g, kind, curve: mk(kind), t: R(), sp: rr(0.05, 0.1) * (kind === 0 ? 1.6 : 1) });
+  }
+  cell.tick.push((t, dt) => {
+    for (const v of ves) {
+      v.t += dt * v.sp;
+      if (v.t > 1) { v.t = 0; v.curve = mk(v.kind); }
+      v.curve.getPointAt(ease.inOut(v.t), v.g.position);
+      v.g.scale.setScalar(Math.max(0.001, Math.min(1, v.t * 7, (1 - v.t) * 7)));
+    }
+  });
+  anchor(cell, 'vesiculas', ves[5].g, 2.4);
+}
+
+function eukCentrosome(cell, cut, E, C) {
+  const grp = new THREE.Group();
+  grp.position.copy(C);
+  const cyl = new THREE.CylinderGeometry(0.019, 0.019, 0.44, 6, 1);
+  const mat = pmat('#ff4fa3', { emi: 0.28, cc: 0.6, rough: 0.3 });
+  const one = V3(1, 1, 1), q = new THREE.Quaternion(), M = new THREE.Matrix4();
+  const mkC = () => {
+    const im = new THREE.InstancedMesh(cyl, mat, 27);
+    let k = 0;
+    for (let i = 0; i < 9; i++) {
+      const a = (i * TAU) / 9, rad = V3(Math.cos(a), 0, Math.sin(a)), tan = V3(-Math.sin(a), 0, Math.cos(a));
+      const b = tan.clone().multiplyScalar(Math.cos(0.6)).addScaledVector(rad, Math.sin(0.6));
+      for (let j = 0; j < 3; j++) im.setMatrixAt(k++, M.compose(rad.clone().multiplyScalar(0.125).addScaledVector(b, (j - 1) * 0.038), q, one));
+    }
+    return im;
+  };
+  const c1 = mkC(), c2 = mkC();
+  c2.rotation.x = Math.PI / 2;
+  c2.position.set(0, -0.2, 0.3);
+  const pcm = [];
+  for (let i = 0; i < 90; i++) { randDir(_a).multiplyScalar(Math.pow(R(), 0.6) * 0.55); pcm.push(_a.x, _a.y + -0.08, _a.z + 0.12); }
+  grp.add(c1, c2, makePoints(pcm, { size: 3, alpha: 0.2, spin: 0.25, wob: 0.03, color: '#ff6fb5', order: 5 }));
+  cell.group.add(grp);
+  own(cell, 'centrosoma', grp);
+  cell.tick.push((t) => { grp.rotation.y = t * 0.3; grp.rotation.z = Math.sin(t * 0.3) * 0.25; });
+  anchor(cell, 'centrosoma', grp, 2.8);
+}
+
+const FIB_VS = /* glsl */`
+attribute float aSeed; varying vec2 vUv; varying float vSeed; varying vec3 vL; varying vec3 vN; varying vec3 vW;
+void main(){ vUv=uv; vSeed=aSeed; vL=position; vec4 w=modelMatrix*vec4(position,1.0); vW=w.xyz;
+  vN=normalize(mat3(modelMatrix)*normal); gl_Position=projectionMatrix*viewMatrix*w; }`;
+const FIB_FS = /* glsl */`
+uniform vec3 uC, uCut; uniform float uTime, uPulse, uHL, uDim, uA, uClip;
+varying vec2 vUv; varying float vSeed; varying vec3 vL, vN, vW;
+void main(){
+  if(uClip>0.5 && vL.x>uCut.x && vL.y>uCut.y && vL.z>uCut.z) discard;
+  vec3 V=normalize(cameraPosition-vW); float ndv=abs(dot(normalize(vN),V)); float core=0.35+0.65*ndv;
+  float p=fract(vUv.x*1.6-uTime*0.22+vSeed); float pulse=smoothstep(0.0,0.03,p)*smoothstep(0.1,0.03,p)*uPulse;
+  vec3 c=uC*(core*0.9+pulse*2.6); c=mix(c,c*0.2,uDim*0.85); c+=uC*uHL*1.1;
+  gl_FragColor=vec4(c,(uA*(0.5+0.5*core)+pulse*0.5)*(1.0-uDim*0.7)); }`;
+function fibMat(color, alpha, pulse, cutter) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uC: { value: col(color) }, uCut: cutter ? cutter.u : { value: V3(99, 99, 99) }, uClip: { value: cutter ? 1 : 0 },
+      uTime: U.time, uPulse: { value: pulse }, uHL: { value: 0 }, uDim: { value: 0 }, uA: { value: alpha } },
+    vertexShader: FIB_VS, fragmentShader: FIB_FS, transparent: true, depthWrite: false,
+  });
+}
+
+function eukCytoskeleton(cell, cut, E, C) {
+  const out = (p, m) => { if (p.length() < m) p.setLength(m); if (p.length() > 4.35) p.setLength(4.35); return p; };
+  const mt = [];
+  for (let i = 0, guard = 0; i < 40 && guard < 600; guard++) {
+    let T;
+    do { T = randDir(V3()).multiplyScalar(rr(3.9, 4.3)); } while (T.distanceTo(C) < 1.6);
+    const pts = [C.clone()];
+    for (const f of [0.2, 0.4, 0.6, 0.8]) pts.push(out(C.clone().lerp(T, f).add(randDir(V3()).multiplyScalar(0.3)), 2.15));
+    pts.push(T);
+    /* que no tapen la cuña abierta del núcleo */
+    if (pts.some((p, k) => k > 0 && inOct(p) && p.length() < 3.4)) continue;
+    mt.push(floatAttr(tubeGeo(pts, 70, 0.013, 5), 'aSeed', R()));
+    i++;
+  }
+  const actin = [];
+  for (let i = 0; i < 130; i++) {
+    const n = randDir(V3()), k = V3().crossVectors(n, randDir(V3())).normalize(), pts = [];
+    for (const a of [-0.15, -0.075, 0, 0.075, 0.15]) pts.push(surfPt(n.clone().applyAxisAngle(k, a), 0.955).add(randDir(V3()).multiplyScalar(0.03)));
+    actin.push(floatAttr(tubeGeo(pts, 18, 0.009, 4), 'aSeed', R()));
+  }
+  const inter = [];
+  for (let i = 0; i < 22; i++) {
+    const n = randDir(V3()), n2 = n.clone().add(randDir(V3()).multiplyScalar(0.6)).normalize(), pts = [];
+    for (let k = 0; k <= 6; k++) {
+      const f = k / 6, d = n.clone().lerp(n2, f).normalize();
+      pts.push(out(d.multiplyScalar(1.92 + f * 2.35).add(randDir(V3()).multiplyScalar(k && k < 6 ? 0.12 : 0)), 1.92));
+    }
+    inter.push(floatAttr(tubeGeo(pts, 50, 0.011, 4), 'aSeed', R()));
+  }
+  const mtM = new THREE.Mesh(merge(mt), fibMat('#8fd8ff', 0.32, 1.0, null));
+  const acM = new THREE.Mesh(merge(actin), fibMat('#ff8fb8', 0.45, 0.0, cut));
+  const ifM = new THREE.Mesh(merge(inter), fibMat('#ffe08a', 0.3, 0.4, cut));
+  [mtM, acM, ifM].forEach((m) => { m.renderOrder = 2; cell.group.add(m); own(cell, 'citoesqueleto', m); });
+  ifM.userData.cutter = acM.userData.cutter = cut;
+  anchor(cell, 'citoesqueleto', C.clone().lerp(V3(2.2, 3.3, 1.9), 0.55), 4.5);
+}
+
+function eukCilia(cell, cut, E) {
+  const L = 1.25, prof = [];
+  for (let i = 0; i <= 22; i++) { const s = i / 22; prof.push(new THREE.Vector2(0.036 * (1 - 0.25 * s), s * L)); }
+  prof.push(new THREE.Vector2(0.02, L + 0.02), new THREE.Vector2(0.0, L + 0.03));
+  const geo = new THREE.LatheGeometry(prof, 8);
+  const N = 90, phases = new Float32Array(N);
+  const mat = addBend(pmat('#cfe6fb', { cc: 0.6, rough: 0.35, emi: 0.08, sheen: 0.3 }), { len: L, amp: 0.55, speed: 5.0, k: 2.4 });
+  const im = new THREE.InstancedMesh(geo, mat, N);
+  const D = E.ciliaDir, wave = V3().crossVectors(D, V3(0, 1, 0)).normalize(), M = new THREE.Matrix4();
+  let i = 0, guard = 0;
+  while (i < N && guard++ < 8000) {
+    const n = randDir(V3());
+    if (n.dot(D) < 0.87) continue;
+    const X = wave.clone().addScaledVector(n, -n.dot(wave)).normalize(), Z = X.clone().cross(n);
+    M.compose(surfPt(n, 0.985), basisQuat(X, n, Z), _b.set(1, rr(0.85, 1.12), 1));
+    im.setMatrixAt(i, M);
+    phases[i] = -n.dot(wave) * 9 + rr(-0.3, 0.3);
+    i++;
+  }
+  im.count = i;
+  geo.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phases, 1));
+  im.frustumCulled = false;
+  cell.group.add(im);
+  own(cell, 'cilios', im);
+  anchor(cell, 'cilios', surfPt(D).addScaledVector(D, 0.85), 5);
+}
+
+function buildEuk() {
+  R = rng(7331);
+  const cell = makeCell('euk', 5.2);
+  const cut = new Cutter(V3(6.2, 6.2, 6.2), V3(0, 0, 0));
+  cell.cutters.push(cut);
+  const E = { ciliaDir: V3(-0.45, 0.75, -0.5).normalize(), occ: [{ c: V3(), r: 1.95 }] };
+  eukMembrane(cell, cut, E);
+  eukNucleus(cell, cut, E);
+  eukRER(cell, cut, E);
+  eukSER(cell, cut, E);
+  eukRibosomes(cell, cut, E);
+  (E.ser || []).forEach((p) => E.occ.push({ c: p, r: 0.3 }));
+  const G = V3(2.42, 1.57, 1.70), C = V3(0.7, 1.95, 1.45);
+  E.occ.push({ c: G, r: 1.0 }, { c: C, r: 0.45 });
+  eukGolgi(cell, cut, E, G);
+  eukCentrosome(cell, cut, E, C);
+  eukMito(cell, cut, E);
+  eukLysoPerox(cell, cut, E);
+  eukVesicles(cell, cut, E, G);
+  eukCytoskeleton(cell, cut, E, C);
+  eukCilia(cell, cut, E);
+  return cell;
+}
+
+
+/* =========================================================
+   CÉLULA PROCARIOTA (bacteria bacilar)
+   ========================================================= */
+function buildPro() {
+  R = rng(4242);
+  const cell = makeCell('pro', 4.6);
+  cell.center = V3(-1.2, 0, 0);
+  cell.labelMode = 'rows';
+  cell.axis = [V3(-3.96, 0, 0), V3(3.96, 0, 0)];
+  cell.radiusV = 2.0;
+  cell.behind = 2.6;
+  const g = cell.group;
+  g.rotation.set(0, 0, 0.16);
+  const HL = 2.6, A = V3(-HL, 0, 0), B = V3(HL, 0, 0);
+  const closed = V3(4.5, 1.6, 1.6);
+  const cCap = new Cutter(closed.clone(), V3(-1.25, 0, 0));
+  const cWall = new Cutter(closed.clone(), V3(-1.0, 0.07, 0.07));
+  const cMem = new Cutter(closed.clone(), V3(-0.75, 0.14, 0.14));
+  cell.cutters.push(cCap, cWall, cMem);
+  const box = { mn: [-4.1, -1.45, -1.45], mx: [4.1, 1.45, 1.45] };
+  const layer = (r, mat, cutter) => {
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, 2 * HL, 24, 80).rotateZ(Math.PI / 2), mat);
+    m.userData.cutter = cutter;
+    g.add(m);
+    return m;
+  };
+
+  /* Envolturas: cápsula, pared, membrana (corte escalonado) */
+  own(cell, 'capsula', layer(1.36, pmat('#1fa463', { cutter: cCap, cc: 0.8, ccr: 0.22, rough: 0.32, sheen: 0.3, sheenColor: '#9ff0c4', emi: 0.05 }), cCap));
+  own(cell, 'pared', layer(1.18, pmat('#c0392b', { cutter: cWall, rough: 0.55, cc: 0.3, emi: 0.06 }), cWall));
+  own(cell, 'membrana', layer(1.07, pmat('#f4d03f', { cutter: cMem, cc: 0.6, rough: 0.35, emi: 0.07 }), cMem));
+  own(cell, 'citoplasma', layer(0.99, pmat('#2f6f9f', { cutter: cMem, side: THREE.BackSide, rough: 0.6, cc: 0.2, emi: 0.14 }), cMem));
+  own(cell, 'capsula', makeCap(cell, cCap, { A, B, rIn: 1.18, rOut: 1.36, mode: 4, c1: '#aaa15d', ...box }));
+  own(cell, 'pared', makeCap(cell, cWall, { A, B, rIn: 1.07, rOut: 1.18, mode: 5, c1: '#c0392b', c2: '#ff8a7a', ...box }));
+  own(cell, 'membrana', makeCap(cell, cMem, { A, B, rIn: 0.99, rOut: 1.07, mode: 1, c1: '#ffd84a', c2: '#fff1a8', c3: '#e0b020', ...box }));
+  own(cell, 'citoplasma', makeCap(cell, cMem, { A, B, rIn: 0, rOut: 0.99, mode: 3, c1: '#2a6fa8', c2: '#6cc0f0', alpha: 0.22, order: 3, ...box }), { shell: 'glass' });
+  const cp = [];
+  while (cp.length < 2400) {
+    const p = V3(rr(-3.5, 3.5), rr(-0.95, 0.95), rr(-0.95, 0.95));
+    if (segDist(p, A, B) < 0.94) cp.push(p.x, p.y, p.z);
+  }
+  const pts = makePoints(cp, { cutter: cMem, size: 2.0, alpha: 0.3, spin: 0, wob: 0.06, color: '#b5e6ff', order: 5 });
+  g.add(pts);
+  own(cell, 'citoplasma', pts, { pick: false });
+
+  /* Nucleoide: cromosoma circular superenrollado */
+  const coef = [0, 1, 2].map(() => Array.from({ length: 12 }, (_, h) => ({
+    a: rr(0.3, 1) / Math.pow(h + 1, 0.5), f: h + 1 + (h > 2 ? Math.floor(rr(0, 10)) : 0), p: rr(0, TAU),
+  })));
+  const raw = [], NP = 480;
+  for (let i = 0; i < NP; i++) {
+    const t = (i / NP) * TAU, v = [0, 0, 0];
+    for (let k = 0; k < 3; k++) for (const c of coef[k]) v[k] += c.a * Math.sin(c.f * t + c.p);
+    raw.push(v);
+  }
+  const mx = [0, 1, 2].map((k) => Math.max(...raw.map((v) => Math.abs(v[k])))), ext = [1.95, 0.62, 0.62];
+  const dna = raw.map((v) => V3(0.15 + (v[0] / mx[0]) * ext[0], (v[1] / mx[1]) * ext[1], (v[2] / mx[2]) * ext[2]));
+  const dnaMesh = new THREE.Mesh(tubeGeo(dna, 2000, 0.028, 6, true),
+    addWrithe(pmat('#e63946', { cc: 0.8, rough: 0.3, emi: 0.14, sheen: 0.5, sheenColor: '#ffb3b8' }), 0.022, 0.6));
+  g.add(dnaMesh);
+  own(cell, 'nucleoide', dnaMesh);
+  let best = dna[0];
+  for (const p of dna) if (p.x > -0.5 && p.x < 1.6 && p.y + p.z > best.y + best.z) best = p;
+  anchor(cell, 'nucleoide', best.clone(), 4.5);
+
+  /* Plásmidos */
+  const plM = pmat('#7bed9f', { emi: 0.28, cc: 0.7, rough: 0.3 });
+  [V3(1.9, 0.42, 0.38), V3(-1.5, -0.3, 0.5), V3(0.6, 0.5, -0.45)].forEach((p, i) => {
+    const r = 0.2 - i * 0.02, pp = [];
+    for (let k = 0; k < 48; k++) { const t = (k / 48) * TAU; pp.push(V3(r * Math.cos(t) + 0.03 * Math.sin(5 * t), r * Math.sin(t), 0.05 * Math.sin(3 * t))); }
+    const m = new THREE.Mesh(tubeGeo(pp, 140, 0.022, 6, true), plM);
+    m.position.copy(p);
+    g.add(m);
+    own(cell, 'plasmidos', m);
+    const s = R() * 10, p0 = p.clone();
+    cell.tick.push((t) => {
+      m.rotation.set(s + t * 0.4, s * 0.5 + t * 0.3, 0);
+      m.position.copy(p0).add(_a.set(Math.sin(t * 0.5 + s), Math.sin(t * 0.4 + s * 2), Math.sin(t * 0.45 + s * 3)).multiplyScalar(0.05));
+    });
+    if (i === 0) anchor(cell, 'plasmidos', m, 2.4);
+  });
+
+  /* Ribosomas 70S */
+  const rib = [];
+  let guard = 0;
+  while (rib.length < 1100 && guard++ < 30000) {
+    const p = V3(rr(-3.5, 3.5), rr(-0.93, 0.93), rr(-0.93, 0.93));
+    if (segDist(p, A, B) < 0.92) rib.push(p);
+  }
+  const ribM = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.034, 1),
+    addJitter(pmat('#454a6e', { rough: 0.4, cc: 0.4, emi: 0.15, emissive: '#6a70b8' }), 0.012, 2.3), rib.length);
+  const M = new THREE.Matrix4(), q0 = new THREE.Quaternion();
+  rib.forEach((p, i) => { const s = rr(0.8, 1.15); ribM.setMatrixAt(i, M.compose(p, q0, _b.set(s, s * 0.85, s))); });
+  g.add(ribM);
+  own(cell, 'ribosomas', ribM);
+  let rb = rib[0];
+  for (const p of rib) if (p.x > 0.2 && p.x < 2 && p.y + p.z > rb.y + rb.z) rb = p;
+  anchor(cell, 'ribosomas', rb.clone(), 2.2);
+
+  /* Inclusiones / gránulos de reserva */
+  const inc = [V3(2.4, 0.45, 0.45)];
+  guard = 0;
+  while (inc.length < 6 && guard++ < 5000) {
+    const p = V3(rr(-3, 3), rr(-0.7, 0.7), rr(-0.7, 0.7));
+    if (segDist(p, A, B) < 0.68 && inc.every((o) => o.distanceTo(p) > 0.9)) inc.push(p);
+  }
+  const incM = [pmat('#f4a261', { emi: 0.2, cc: 0.8, rough: 0.25 }), pmat('#b388eb', { emi: 0.22, cc: 0.8, rough: 0.25 })];
+  inc.forEach((p, i) => {
+    const m = new THREE.Mesh(lumpyGeo(i === 0 ? 0.15 : rr(0.09, 0.15), 0.1, 3), incM[i % 2]);
+    m.position.copy(p);
+    g.add(m);
+    own(cell, 'inclusiones', m);
+    drift(cell, m, 0.04, 0.4);
+    if (i === 0) anchor(cell, 'inclusiones', m, 2.4);
+  });
+
+  /* Pili / fimbrias (y un pilus sexual largo) */
+  const Lp = 0.7, prof = [];
+  for (let i = 0; i <= 14; i++) { const s = i / 14; prof.push(new THREE.Vector2(0.021 * (1 - 0.3 * s), s * Lp)); }
+  prof.push(new THREE.Vector2(0, Lp + 0.01));
+  const pg = new THREE.LatheGeometry(prof, 6);
+  const NPi = 95, ph = new Float32Array(NPi);
+  const pili = new THREE.InstancedMesh(pg,
+    addBend(pmat('#5fd39a', { cutter: cCap, cc: 0.6, rough: 0.35, emi: 0.08 }), { len: Lp, amp: 0.28, speed: 1.6, k: 1.6 }), NPi);
+  const cylA = TAU * 1.36 * 2 * HL, capA = 4 * Math.PI * 1.36 * 1.36;
+  let n = 0, tipAnchor = null;
+  guard = 0;
+  while (n < NPi && guard++ < 5000) {
+    let nn, base;
+    if (R() < cylA / (cylA + capA)) {
+      const a = rr(0, TAU);
+      nn = V3(0, Math.cos(a), Math.sin(a));
+      base = V3(rr(-HL, HL), 0, 0).addScaledVector(nn, 1.34);
+    } else {
+      nn = randDir(V3());
+      if (nn.x < -0.7) continue;
+      base = (nn.x > 0 ? B : A).clone().addScaledVector(nn, 1.34);
+    }
+    const X = randDir(V3()).projectOnPlane(nn).normalize(), Z = X.clone().cross(nn), sc = rr(0.75, 1.25);
+    pili.setMatrixAt(n, M.compose(base, basisQuat(X, nn, Z), _b.set(1, sc, 1)));
+    ph[n] = rr(0, TAU);
+    if (!tipAnchor && nn.y > 0.85 && base.x < -1.6) tipAnchor = base.clone().addScaledVector(nn, Lp * sc);
+    n++;
+  }
+  pili.count = n;
+  pg.setAttribute('aPhase', new THREE.InstancedBufferAttribute(ph, 1));
+  pili.frustumCulled = false;
+  pili.userData.cutter = cCap;
+  g.add(pili);
+  own(cell, 'pili', pili);
+  const sg = pg.clone();
+  sg.setAttribute('aPhase', new THREE.InstancedBufferAttribute(new Float32Array([0.5]), 1));
+  const sex = new THREE.InstancedMesh(sg,
+    addBend(pmat('#86efbf', { cutter: cCap, cc: 0.6, rough: 0.35, emi: 0.1 }), { len: Lp, amp: 0.13, speed: 0.9, k: 1.2 }), 1);
+  const sn = V3(0, 0.7, -0.71).normalize();
+  const sX = V3(1, 0, 0), sZ = sX.clone().cross(sn);
+  sex.setMatrixAt(0, M.compose(V3(0.8, 0, 0).addScaledVector(sn, 1.34), basisQuat(sX, sn, sZ), _b.set(1.5, 4.6, 1.5)));
+  sex.frustumCulled = false;
+  g.add(sex);
+  own(cell, 'pili', sex);
+  anchor(cell, 'pili', tipAnchor || V3(-2.2, 2.0, 0.3), 4);
+
+  /* Flagelo con motor rotatorio */
+  const fl = new THREE.Group();
+  fl.position.set(-3.9, 0, 0);
+  g.add(fl);
+  const hookM = pmat('#1d7a52', { cc: 0.8, rough: 0.3, emi: 0.08 });
+  const filM = pmat('#27a065', { cc: 0.9, rough: 0.25, emi: 0.08, sheen: 0.5, sheenColor: '#c9ffe2' });
+  const motM = pmat('#ffd84a', { emi: 0.22, cc: 0.6 });
+  const hook = new THREE.Mesh(tubeGeo([V3(0.05, 0, 0), V3(-0.25, 0.1, 0), V3(-0.5, 0.12, 0.02), V3(-0.62, 0.06, 0)], 30, 0.062, 8), hookM);
+  const motor = new THREE.Group();
+  for (let i = 0; i < 2; i++) {
+    const t = new THREE.Mesh(new THREE.TorusGeometry(0.12 - i * 0.02, 0.032, 10, 28), motM);
+    t.rotation.y = Math.PI / 2;
+    t.position.x = -0.05 - i * 0.07;
+    motor.add(t);
+  }
+  const spin = new THREE.Group();
+  spin.position.set(-0.62, 0.06, 0);
+  fl.add(hook, motor, spin);
+  const hp = [], om = TAU / 1.3;
+  for (let i = 0; i <= 260; i++) {
+    const s = (i / 260) * 7.6, h = 0.34 * Math.min(1, s / 1.0) * (1 - (0.15 * s) / 7.6);
+    hp.push(V3(-s, h * Math.cos(om * s), h * Math.sin(om * s)));
+  }
+  spin.add(new THREE.Mesh(tubeGeo(hp, 900, 0.05, 8), filM));
+  cell.tick.push((t) => {
+    spin.rotation.x = -t * 7.5;
+    fl.rotation.z = Math.sin(t * 0.8) * 0.07;
+    fl.rotation.y = Math.cos(t * 0.6) * 0.09;
+  });
+  own(cell, 'flagelo', fl);
+  anchor(cell, 'flagelo', V3(-6.6, 0.08, 0), 8);
+
+  anchor(cell, 'capsula', V3(-2.0, 0.96, 0.96), 7);
+  anchor(cell, 'pared', V3(-1.12, 0.83, 0.83), 3.4);
+  anchor(cell, 'membrana', V3(-0.87, 0.755, 0.755), 3.4);
+  anchor(cell, 'citoplasma', V3(1.4, 0.62, 0.2), 5);
+  return cell;
+}
+
+
+/* =========================================================
+   CONTENIDO (textos de cada estructura)
+   ========================================================= */
+const INFO = {
+  euk: {
+    kicker: 'Célula animal', title: 'Célula eucariota', color: '#5ec8ff', umPerUnit: 2.0,
+    badge: ['Célula eucariota animal', 'Modelo esquemático · proporciones aproximadas'],
+    desc: 'Tiene un núcleo verdadero rodeado por una envoltura y un sistema de orgánulos membranosos que se reparten el trabajo, como una fábrica con departamentos. Animales, plantas, hongos y protistas están formados por este tipo de célula.',
+    facts: [['Tamaño', '10–100 µm'], ['Núcleo', 'Sí, con envoltura'], ['ADN', 'Lineal, con histonas'], ['Ribosomas', '80S'], ['Orgánulos', 'Con membrana'], ['División', 'Mitosis / meiosis']],
+    parts: [
+      { id: 'membrana', name: 'Membrana plasmática', color: '#5ec8ff', cat: 'Membrana', size: '7–10 nm de grosor',
+        desc: 'Bicapa de fosfolípidos con proteínas, colesterol y glúcidos (glucocáliz) que envuelve a la célula. Según el modelo de mosaico fluido, sus componentes se desplazan lateralmente.',
+        fn: ['Permeabilidad selectiva: controla qué entra y qué sale.', 'Transporte pasivo y activo mediante canales, transportadores y bombas.', 'Reconoce señales químicas gracias a sus receptores.', 'Endocitosis y exocitosis de moléculas grandes.'],
+        fact: 'Es tan delgada que harían falta unas 10.000 membranas apiladas para igualar el grosor de una hoja de papel.' },
+      { id: 'citoplasma', name: 'Citoplasma', color: '#7fd4ff', cat: 'Medio interno', size: '≈ 50 % del volumen celular',
+        desc: 'Espacio entre la membrana y el núcleo. Está formado por el citosol —un gel acuoso rico en proteínas, iones y metabolitos— y los orgánulos suspendidos en él. Las partículas en movimiento representan las corrientes citoplasmáticas.',
+        fn: ['Sede de la glucólisis y de muchas reacciones metabólicas.', 'Medio de transporte de sustancias.', 'Almacena reservas como glucógeno y gotas de lípidos.'],
+        fact: 'El citosol tiene entre 70 y 80 % de agua, pero está tan lleno de proteínas que se comporta más como un gel que como un líquido.' },
+      { id: 'nucleo', name: 'Núcleo', color: '#a46cf0', cat: 'Orgánulo · doble membrana', size: '5–10 µm de diámetro',
+        desc: 'El centro de control de la célula. Guarda el ADN y regula qué genes se expresan, cuándo y en qué cantidad.',
+        fn: ['Almacena y protege la información genética.', 'Transcripción: copia los genes a ARN mensajero.', 'Replica el ADN antes de la división celular.'],
+        fact: 'Si se estirara el ADN de un solo núcleo humano mediría unos 2 metros de largo.' },
+      { id: 'envoltura', name: 'Envoltura nuclear y poros', short: 'Envoltura nuclear', color: '#d2a8ff', cat: 'Doble membrana', size: 'Poros de ≈ 120 nm',
+        desc: 'Doble membrana que rodea al núcleo y se continúa con el retículo endoplasmático. Está atravesada por miles de complejos de poro nuclear.',
+        fn: ['Separa el material genético del citoplasma.', 'Los poros regulan la salida de ARN y la entrada de proteínas.', 'Sostiene la cromatina mediante la lámina nuclear.'],
+        fact: 'Un núcleo típico tiene entre 3.000 y 5.000 poros, y por cada uno pueden pasar cientos de moléculas por segundo.' },
+      { id: 'nucleolo', name: 'Nucléolo', color: '#6a5dff', cat: 'Región sin membrana', size: '1–2 µm',
+        desc: 'Región densa del núcleo, sin membrana, donde se transcriben los genes del ARN ribosómico.',
+        fn: ['Sintetiza el ARN ribosómico (ARNr).', 'Ensambla las subunidades de los ribosomas.', 'Participa en la respuesta celular al estrés.'],
+        fact: 'Las células que fabrican muchas proteínas, como las del páncreas, tienen nucléolos grandes y a veces varios.' },
+      { id: 'cromatina', name: 'Cromatina', color: '#9a5ae6', cat: 'ADN + proteínas', size: 'Fibra de 10–30 nm',
+        desc: 'Complejo de ADN e histonas que llena el núcleo. Puede estar laxa (eucromatina, activa) o compacta (heterocromatina, junto a la envoltura) y se condensa en cromosomas durante la división.',
+        fn: ['Empaqueta el ADN dentro del núcleo.', 'Regula el acceso a los genes (epigenética).', 'Forma los cromosomas en la mitosis.'],
+        fact: 'El ADN se enrolla en "carretes" de histonas llamados nucleosomas, como cuentas de un collar.' },
+      { id: 'rer', name: 'Retículo endoplasmático rugoso', short: 'RE rugoso', color: '#f07ca0', cat: 'Orgánulo · membrana simple', size: 'Hasta 50 % de las membranas',
+        desc: 'Red de sacos aplanados (cisternas) cubiertos de ribosomas y unida a la envoltura nuclear. Esos ribosomas le dan su aspecto "rugoso".',
+        fn: ['Síntesis de proteínas de secreción y de membrana.', 'Plegamiento y control de calidad de proteínas.', 'Inicio de la glicosilación.'],
+        fact: 'Es muy abundante en células secretoras, como las que producen anticuerpos o enzimas digestivas.' },
+      { id: 'rel', name: 'Retículo endoplasmático liso', short: 'RE liso', color: '#c6e05f', cat: 'Orgánulo · membrana simple', size: 'Túbulos de 30–60 nm',
+        desc: 'Red de túbulos interconectados sin ribosomas, en continuidad con el RE rugoso.',
+        fn: ['Síntesis de lípidos, fosfolípidos y hormonas esteroideas.', 'Detoxificación de fármacos y venenos (sobre todo en el hígado).', 'Almacena y libera calcio (Ca²⁺).'],
+        fact: 'En las células musculares se llama retículo sarcoplásmico, y el calcio que libera dispara cada contracción.' },
+      { id: 'golgi', name: 'Aparato de Golgi', color: '#ff9b45', cat: 'Orgánulo · membrana simple', size: '1–3 µm',
+        desc: 'Pila de cisternas aplanadas con una cara cis, que recibe material del RE, y una cara trans, que despacha vesículas. Funciona como el "correo" de la célula.',
+        fn: ['Modifica proteínas y lípidos (glicosilación).', 'Clasifica y empaqueta moléculas en vesículas.', 'Forma lisosomas y vesículas de secreción.'],
+        fact: 'Lo describió Camillo Golgi en 1898 con una tinción de plata; durante décadas se dudó de que existiera.' },
+      { id: 'mitocondrias', name: 'Mitocondrias', color: '#e5484d', cat: 'Orgánulo · doble membrana', size: '0,5–1 × 1–4 µm',
+        desc: 'Orgánulos con doble membrana: la interna se pliega en crestas que aumentan su superficie. Tienen ADN y ribosomas propios.',
+        fn: ['Respiración celular: producen la mayor parte del ATP.', 'Ciclo de Krebs en la matriz y cadena respiratoria en las crestas.', 'Regulan el calcio y la muerte celular programada (apoptosis).'],
+        fact: 'Descienden de bacterias que fueron "adoptadas" por otra célula hace más de 1.500 millones de años (teoría endosimbiótica).' },
+      { id: 'ribosomas', name: 'Ribosomas (80S)', short: 'Ribosomas', color: '#5b60ff', cat: 'Sin membrana', size: '25–30 nm',
+        desc: 'Complejos de ARN ribosómico y proteínas formados por dos subunidades (60S + 40S). Pueden estar libres en el citosol, agrupados en polisomas, o unidos al RE rugoso.',
+        fn: ['Traducen el ARN mensajero en proteínas.', 'Los libres fabrican proteínas para el citosol.', 'Los unidos al RER fabrican proteínas de secreción y de membrana.'],
+        fact: 'Una sola célula puede tener varios millones de ribosomas trabajando a la vez.' },
+      { id: 'lisosomas', name: 'Lisosomas', color: '#ffd166', cat: 'Orgánulo · membrana simple', size: '0,1–1,2 µm',
+        desc: 'Vesículas con más de 50 enzimas digestivas (hidrolasas) que trabajan en un interior ácido, con pH de 4,5 a 5.',
+        fn: ['Digestión intracelular de macromoléculas.', 'Autofagia: reciclan orgánulos viejos o dañados.', 'Degradan bacterias y partículas fagocitadas.'],
+        fact: 'Su pH ácido es una medida de seguridad: si sus enzimas escapan al citosol (pH 7,2) casi no funcionan.' },
+      { id: 'peroxisomas', name: 'Peroxisomas', color: '#5cd18a', cat: 'Orgánulo · membrana simple', size: '0,1–1 µm',
+        desc: 'Vesículas con enzimas oxidativas como la catalasa; muchas muestran un núcleo cristalino de urato oxidasa.',
+        fn: ['Degradan ácidos grasos de cadena muy larga.', 'Descomponen el peróxido de hidrógeno (H₂O₂) en agua y oxígeno.', 'Participan en la síntesis de lípidos de la mielina.'],
+        fact: 'La catalasa es una de las enzimas más rápidas que existen: procesa millones de moléculas de H₂O₂ por segundo.' },
+      { id: 'vesiculas', name: 'Vesículas de transporte', short: 'Vesículas', color: '#bfe4ff', cat: 'Membrana simple', size: '50–200 nm',
+        desc: 'Pequeñas esferas de membrana que llevan carga entre el RE, el Golgi, la membrana y los lisosomas. En el modelo se las ve viajar por la célula.',
+        fn: ['Transporte del RE al Golgi.', 'Secreción hacia el exterior por exocitosis.', 'Captación de material por endocitosis.'],
+        fact: 'Las proteínas motoras cinesina y dineína "caminan" sobre los microtúbulos con pasos de 8 nm.' },
+      { id: 'centrosoma', name: 'Centrosoma y centriolos', short: 'Centrosoma', color: '#ff4fa3', cat: 'Sin membrana', size: 'Centriolos de 0,2 × 0,5 µm',
+        desc: 'Par de centriolos perpendiculares, cada uno con 9 tripletes de microtúbulos, rodeados de material pericentriolar.',
+        fn: ['Principal centro organizador de microtúbulos.', 'Forma el huso mitótico durante la división.', 'Origina los cuerpos basales de cilios y flagelos.'],
+        fact: 'Es típico de las células animales: la mayoría de las células vegetales no tiene centriolos.' },
+      { id: 'citoesqueleto', name: 'Citoesqueleto', color: '#8fd8ff', cat: 'Red de proteínas', size: '7–25 nm de grosor',
+        desc: 'Red dinámica de microtúbulos (25 nm), filamentos intermedios (10 nm) y microfilamentos de actina (7 nm). Los destellos que recorren los microtúbulos representan el transporte de carga.',
+        fn: ['Da forma y resistencia mecánica a la célula.', 'Sirve de vía para el transporte de vesículas y orgánulos.', 'Permite el movimiento celular y la división.'],
+        fact: 'Los microtúbulos crecen y se desarman continuamente: es lo que se llama inestabilidad dinámica.' },
+      { id: 'cilios', name: 'Cilios', color: '#d6ecff', cat: 'Prolongación de membrana', size: '0,25 µm × 5–10 µm',
+        desc: 'Prolongaciones móviles sostenidas por un axonema de microtúbulos en disposición 9 + 2. Baten coordinados en ondas metacrónicas.',
+        fn: ['Desplazan líquidos y partículas, como el moco en las vías respiratorias.', 'Permiten nadar a algunos protistas.', 'El cilio primario funciona como antena sensorial.'],
+        fact: 'Cada célula de la tráquea tiene unos 200 cilios que baten entre 10 y 20 veces por segundo.' },
+    ],
+  },
+  pro: {
+    kicker: 'Bacteria bacilar', title: 'Célula procariota', color: '#4fd38b', umPerUnit: 0.26,
+    badge: ['Célula procariota · bacilo', 'Modelo esquemático · proporciones aproximadas'],
+    desc: 'No tiene núcleo ni orgánulos membranosos: su ADN está libre en el citoplasma, en el nucleoide. Son las células más antiguas (unos 3.500 millones de años) y las más abundantes del planeta: bacterias y arqueas.',
+    facts: [['Tamaño', '0,5–5 µm'], ['Núcleo', 'No (nucleoide)'], ['ADN', 'Circular + plásmidos'], ['Ribosomas', '70S'], ['Orgánulos', 'Sin membrana'], ['División', 'Fisión binaria']],
+    parts: [
+      { id: 'capsula', name: 'Cápsula', color: '#2bb673', cat: 'Envoltura externa', size: '0,2–1 µm',
+        desc: 'Capa gelatinosa de polisacáridos (a veces de proteínas) que rodea a muchas bacterias por fuera de la pared.',
+        fn: ['Protege de la desecación y de la fagocitosis.', 'Facilita la adhesión y la formación de biopelículas.', 'Es un factor de virulencia en patógenos como el neumococo.'],
+        fact: 'En 1928 Griffith descubrió la "transformación" bacteriana comparando neumococos con y sin cápsula.' },
+      { id: 'pared', name: 'Pared celular', color: '#e05a4b', cat: 'Envoltura', size: '10–80 nm',
+        desc: 'Malla rígida de peptidoglucano (mureína) por fuera de la membrana. Es gruesa en las bacterias Gram positivas y delgada, con una membrana externa, en las Gram negativas.',
+        fn: ['Da forma a la célula (bacilo, coco, espirilo).', 'Resiste la presión osmótica y evita que la célula estalle.', 'Es el blanco de antibióticos como la penicilina.'],
+        fact: 'La tinción de Gram, inventada en 1884, clasifica a las bacterias justamente según esta pared.' },
+      { id: 'membrana', name: 'Membrana plasmática', color: '#f4d03f', cat: 'Membrana', size: '7–8 nm',
+        desc: 'Bicapa lipídica con proteínas, similar a la eucariota. Como no hay mitocondrias, en ella ocurren la respiración y la síntesis de ATP.',
+        fn: ['Transporte selectivo de nutrientes e iones.', 'Cadena respiratoria y ATP sintasa.', 'Anclaje del motor flagelar y síntesis de la pared.'],
+        fact: 'El flujo de protones a través de esta membrana es lo que hace girar el motor del flagelo.' },
+      { id: 'citoplasma', name: 'Citoplasma', color: '#5fa8e8', cat: 'Medio interno', size: '≈ 80 % agua',
+        desc: 'Citosol sin compartimentos membranosos internos, muy concentrado en proteínas, ribosomas y metabolitos.',
+        fn: ['Sede del metabolismo (glucólisis, biosíntesis).', 'Contiene el nucleoide, los ribosomas y las inclusiones.', 'Allí la transcripción y la traducción ocurren a la vez.'],
+        fact: 'En las bacterias un gen puede empezar a traducirse mientras todavía se está transcribiendo.' },
+      { id: 'nucleoide', name: 'Nucleoide (cromosoma)', short: 'Nucleoide', color: '#e63946', cat: 'Región sin membrana', size: 'ADN de ≈ 1,5 mm',
+        desc: 'Región irregular donde está el cromosoma bacteriano: una única molécula de ADN circular, superenrollada y sin histonas verdaderas.',
+        fn: ['Contiene los genes esenciales de la célula.', 'Se replica y se reparte durante la fisión binaria.', 'Lo organizan proteínas asociadas como HU y H-NS.'],
+        fact: 'El cromosoma de E. coli tiene 4,6 millones de pares de bases y mide 1,5 mm: ¡unas 700 veces el largo de la bacteria!' },
+      { id: 'plasmidos', name: 'Plásmidos', color: '#7bed9f', cat: 'ADN extracromosómico', size: '1–200 kb',
+        desc: 'Pequeñas moléculas de ADN circular, independientes del cromosoma, que se replican por su cuenta.',
+        fn: ['Portan genes accesorios (resistencia a antibióticos, toxinas).', 'Se transfieren entre bacterias por conjugación.', 'Se usan como vectores en ingeniería genética.'],
+        fact: 'Gracias a los plásmidos la resistencia a antibióticos puede pasar de una especie bacteriana a otra.' },
+      { id: 'ribosomas', name: 'Ribosomas (70S)', short: 'Ribosomas', color: '#7a80d8', cat: 'Sin membrana', size: '≈ 20 nm',
+        desc: 'Más pequeños que los eucariotas y formados por subunidades 50S y 30S. Están dispersos por todo el citoplasma.',
+        fn: ['Traducen el ARNm en proteínas.', 'Pueden traducir mientras el ARNm se sintetiza.', 'Son blanco de antibióticos como tetraciclinas y estreptomicina.'],
+        fact: 'Una bacteria de crecimiento rápido puede tener hasta 70.000 ribosomas.' },
+      { id: 'inclusiones', name: 'Inclusiones', color: '#f4a261', cat: 'Gránulos de reserva', size: '0,1–1 µm',
+        desc: 'Depósitos de sustancias de reserva en el citoplasma, como glucógeno, polifosfato (volutina) o polihidroxibutirato (PHB).',
+        fn: ['Almacenan carbono, energía o fosfato.', 'Permiten sobrevivir en épocas de escasez.', 'Algunas, como los magnetosomas, orientan a la bacteria.'],
+        fact: 'El PHB que acumulan algunas bacterias se usa para fabricar plásticos biodegradables.' },
+      { id: 'pili', name: 'Pili y fimbrias', short: 'Pili', color: '#5fd39a', cat: 'Apéndices proteicos', size: '2–10 nm × hasta 2 µm',
+        desc: 'Filamentos de pilina más finos y cortos que el flagelo. Las fimbrias son numerosas; el pilus sexual, largo y único, se ve sobresaliendo del resto.',
+        fn: ['Adhesión a superficies y a células del huésped.', 'Conjugación: el pilus sexual une dos bacterias para transferir ADN.', 'Algunos permiten moverse a "tirones" (twitching).'],
+        fact: 'Los pili tipo IV se retraen con una fuerza enorme para su tamaño: más de 100 piconewtons.' },
+      { id: 'flagelo', name: 'Flagelo', color: '#27a065', cat: 'Apéndice de locomoción', size: '20 nm × 5–20 µm',
+        desc: 'Filamento helicoidal de flagelina unido por un gancho a un motor rotatorio incrustado en la membrana y la pared.',
+        fn: ['Propulsa a la bacteria girando como una hélice.', 'Permite la quimiotaxis: nadar hacia nutrientes o lejos de tóxicos.', 'El motor puede invertir el giro para cambiar de dirección.'],
+        fact: 'El motor flagelar puede girar a más de 100.000 rpm y cambiar de sentido en milisegundos.' },
+    ],
+  },
+};
+const CMP = {
+  rows: [
+    ['Tamaño típico', '10–100 µm', '0,5–5 µm'],
+    ['Núcleo', 'Verdadero, con envoltura nuclear', 'No tiene; ADN en el nucleoide'],
+    ['Material genético', 'ADN lineal en varios cromosomas, con histonas', 'Un cromosoma circular + plásmidos'],
+    ['Orgánulos membranosos', 'Sí: RE, Golgi, mitocondrias, lisosomas…', 'No'],
+    ['Ribosomas', '80S (60S + 40S)', '70S (50S + 30S)'],
+    ['Pared celular', 'Solo en plantas (celulosa) y hongos (quitina)', 'Casi siempre (peptidoglucano)'],
+    ['Citoesqueleto', 'Complejo: microtúbulos, actina y filamentos intermedios', 'Simple (proteínas FtsZ, MreB)'],
+    ['Flagelos', 'Con microtúbulos 9 + 2; se agitan', 'De flagelina; giran como una hélice'],
+    ['Respiración celular', 'En las mitocondrias', 'En la membrana plasmática'],
+    ['División', 'Mitosis y meiosis', 'Fisión binaria'],
+    ['Organismos', 'Animales, plantas, hongos y protistas', 'Bacterias y arqueas'],
+  ],
+  same: '<b>En común:</b> ambas tienen membrana plasmática, citoplasma, ribosomas y ADN como material genético; usan el mismo código genético y el ATP como moneda de energía.',
+};
+
+
+/* =========================================================
+   INTERFAZ Y BUCLE PRINCIPAL
+   ========================================================= */
+const cells = { euk: buildEuk(), pro: buildPro() };
+cells.euk.center = V3();
+const VIEWS = {
+  euk: { dir: V3(9.6, 7.0, 12.6).normalize(), dist: 24 },
+  pro: { dir: V3(0.3, 0.62, 0.95).normalize(), dist: 19 },
+};
+const BG = { euk: col('#0b2547'), pro: col('#08352f') };
+const S = { cell: 'euk', sel: null, hover: null, labels: true, cut: true, rot: controls.autoRotate, paused: false, iso: false, tour: false, tourT: 0 };
+const PRES = {
+  membrana: 'Todas las células', citoplasma: 'Todas las células', ribosomas: 'Todas las células',
+  pared: 'Procariotas, plantas y hongos', capsula: 'Muchas bacterias', cilios: 'Algunas eucariotas',
+  centrosoma: 'Células animales', flagelo: 'Procariotas (distinto del eucariota)', pili: 'Muchas bacterias',
+  plasmidos: 'Procariotas (y levaduras)', inclusiones: 'Procariotas', nucleoide: 'Procariotas',
+};
+for (const c of Object.values(cells)) { c.vis = 0; c.cutT = 0; c.delay = 0; }
+cells.euk.delay = 0.35;
+renderer.compile(scene, camera);
+cells.pro.group.visible = false;
+
+const infoEl = $('#info'), listEl = $('#partList'), labelsEl = $('#labels'), linesEl = $('#lines'), tipEl = $('#tip');
+const isNarrow = () => innerWidth < 860;
+const partInfo = (id) => INFO[S.cell].parts.find((p) => p.id === id);
+
+/* ---------- vuelo de cámara ---------- */
+const fly = { on: false, t: 0, dur: 1.2, q0: V3(), q1: V3(), d0: V3(), d1: V3(), r0: 1, r1: 1 };
+function flyTo(target, dist, dir, dur = 1.2) {
+  const off = camera.position.clone().sub(controls.target);
+  fly.q0.copy(controls.target); fly.q1.copy(target);
+  fly.r0 = off.length(); fly.d0.copy(off).normalize();
+  fly.d1.copy(dir || fly.d0).normalize(); fly.r1 = dist;
+  fly.t = 0; fly.dur = dur; fly.on = dur > 0;
+  if (!fly.on) { controls.target.copy(target); camera.position.copy(target).addScaledVector(fly.d1, dist); }
+}
+function homeTarget(key) {
+  const c = cells[key];
+  return (c.center || V3()).clone().applyEuler(new THREE.Euler(0, 0, c.group.rotation.z));
+}
+function flyHome(dur = 1.3) {
+  const v = VIEWS[S.cell];
+  flyTo(homeTarget(S.cell), v.dist * (isNarrow() ? 1.4 : 1), v.dir, dur);
+}
+function anchorWorld(cell, part, out) {
+  if (part.anchor.isObject3D) return part.anchor.getWorldPosition(out);
+  return out.copy(part.anchor).applyMatrix4(cell.group.matrixWorld);
+}
+function focusPart(id) {
+  const cell = cells[S.cell], p = cell.parts.get(id);
+  if (!p || !p.anchor) return;
+  const tgt = anchorWorld(cell, p, V3());
+  const cw = cell.group.localToWorld((cell.center || V3()).clone());
+  const out = tgt.clone().sub(cw), dir = camera.position.clone().sub(controls.target).normalize();
+  if (out.lengthSq() > 0.01) dir.lerp(out.normalize(), 0.35).normalize();
+  flyTo(tgt, p.focus * (isNarrow() ? 1.3 : 1), dir, 1.4);
+}
+
+/* ---------- selección y resaltado ---------- */
+function select(id, opt = {}) {
+  S.sel = id || null;
+  S.tourT = 0;
+  renderInfo(); syncList();
+  if (S.sel && opt.focus !== false) focusPart(S.sel);
+}
+function setHover(id, fromCanvas) {
+  if (S.hover === id) return;
+  S.hover = id;
+  canvas.classList.toggle('hovering', !!id);
+  if (id && fromCanvas) { tipEl.textContent = partInfo(id)?.name || ''; tipEl.classList.add('show'); }
+  else tipEl.classList.remove('show');
+}
+function step(d) {
+  const P = INFO[S.cell].parts;
+  let i = P.findIndex((p) => p.id === S.sel);
+  if (i < 0 && d < 0) i = 0;
+  select(P[(i + d + P.length) % P.length].id);
+}
+function applyHighlights(dt) {
+  const cell = cells[S.cell], t = performance.now() / 1000, acc = new Map();
+  for (const p of cell.parts.values()) {
+    const sel = p.id === S.sel, hov = p.id === S.hover;
+    const hlT = sel ? 0.24 + 0.22 * (0.5 + 0.5 * Math.sin(t * 3.2)) : hov ? 0.32 : 0;
+    const dimT = S.iso && S.sel && !sel ? 1 : 0;
+    p.hl += (hlT - p.hl) * Math.min(1, dt * 9);
+    p.dim += (dimT - p.dim) * Math.min(1, dt * 5);
+    for (const m of p.mats) {
+      const a = acc.get(m);
+      if (!a) acc.set(m, { hl: p.hl, dim: p.dim });
+      else { a.hl = Math.max(a.hl, p.hl); a.dim = Math.min(a.dim, p.dim); }
+    }
+  }
+  for (const [m, a] of acc) applyMat(m, a.hl, a.dim);
+}
+
+/* ---------- panel de información ---------- */
+const X_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+function renderInfo() {
+  const C = INFO[S.cell];
+  let h;
+  if (!S.sel) {
+    h = `<div class="ip-kicker">${C.kicker}</div>
+      <div class="ip-head" style="--c:${C.color}"><div><h3 style="font-size:25px;margin-top:4px">${C.title}</h3></div></div>
+      <p>${C.desc}</p>
+      <div class="ip-grid">${C.facts.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>
+      <div class="ip-fact" style="--c:${C.color}"><b>Cómo explorar</b>Hacé clic en cualquier estructura del modelo, de la lista o de las etiquetas. Con <em>Recorrido</em> las ves todas, una por una.</div>
+      <div class="ip-actions" style="--c:${C.color}"><button class="btn" data-act="tour">Recorrido guiado</button><button class="btn" data-act="cmp">Comparar</button></div>`;
+  } else {
+    const i = C.parts.findIndex((p) => p.id === S.sel), p = C.parts[i];
+    h = `<div class="ip-head" style="--c:${p.color}"><span class="ip-dot"></span>
+        <div><div class="ip-kicker">${p.cat}</div><h3>${p.name}</h3></div>
+        <button class="ip-x" data-act="close" aria-label="Cerrar">${X_ICON}</button></div>
+      <p>${p.desc}</p>
+      <h4>Funciones</h4><ul style="--c:${p.color}">${p.fn.map((f) => `<li>${f}</li>`).join('')}</ul>
+      <div class="ip-grid"><div><span>Tamaño</span><b>${p.size}</b></div><div><span>Presente en</span><b>${PRES[p.id] || (S.cell === 'euk' ? 'Eucariotas' : 'Procariotas')}</b></div></div>
+      <div class="ip-fact" style="--c:${p.color}"><b>¿Sabías que…?</b>${p.fact}</div>
+      <div class="ip-actions" style="--c:${p.color}"><button class="btn" data-act="focus">Enfocar</button><button class="btn ${S.iso ? 'on' : ''}" data-act="iso">Aislar</button></div>
+      <div class="ip-nav"><button data-act="prev" aria-label="Anterior">‹</button><span>${i + 1} / ${C.parts.length}</span><button data-act="next" aria-label="Siguiente">›</button></div>`;
+  }
+  infoEl.innerHTML = h;
+  infoEl.classList.remove('swap'); void infoEl.offsetWidth; infoEl.classList.add('swap');
+  infoEl.classList.toggle('collapsed', isNarrow() && !S.sel);
+  infoEl.scrollTop = 0;
+  computeViewOffset();
+}
+infoEl.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const a = b.dataset.act;
+  if (a === 'close') select(null, { focus: false });
+  else if (a === 'focus') focusPart(S.sel);
+  else if (a === 'iso') { S.iso = !S.iso; b.classList.toggle('on', S.iso); }
+  else if (a === 'prev') step(-1);
+  else if (a === 'next') step(1);
+  else if (a === 'tour') startTour();
+  else if (a === 'cmp') openModal();
+});
+
+/* ---------- lista de estructuras ---------- */
+function renderList() {
+  const C = INFO[S.cell];
+  listEl.innerHTML = C.parts.map((p, i) => `<li data-id="${p.id}" style="--c:${p.color};animation-delay:${i * 28}ms" title="${p.name}"><i></i>${p.short || p.name}</li>`).join('');
+  $('#count').textContent = C.parts.length + ' partes';
+  syncList();
+}
+function syncList() {
+  listEl.querySelectorAll('li').forEach((li) => {
+    const on = li.dataset.id === S.sel;
+    li.classList.toggle('on', on);
+    if (on) li.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  });
+}
+listEl.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li) select(li.dataset.id); });
+listEl.addEventListener('mouseover', (e) => { const li = e.target.closest('li'); if (li) setHover(li.dataset.id, false); });
+listEl.addEventListener('mouseleave', () => setHover(null));
+
+/* ---------- etiquetas con líneas guía ---------- */
+const SVGNS = 'http://www.w3.org/2000/svg';
+let LBL = [], bounds = { L: 0, R: innerWidth };
+function buildLabels() {
+  labelsEl.innerHTML = ''; linesEl.innerHTML = '';
+  LBL = INFO[S.cell].parts.map((p) => {
+    const el = document.createElement('div');
+    el.className = 'lbl';
+    el.style.setProperty('--c', p.color);
+    el.style.transition = 'background .2s, border-color .2s, box-shadow .2s';
+    el.innerHTML = `<i></i>${p.short || p.name}`;
+    el.addEventListener('mouseenter', () => setHover(p.id, false));
+    el.addEventListener('mouseleave', () => setHover(null));
+    el.addEventListener('click', () => select(p.id));
+    labelsEl.appendChild(el);
+    const path = document.createElementNS(SVGNS, 'path'), dot = document.createElementNS(SVGNS, 'circle');
+    dot.setAttribute('r', '2.6');
+    linesEl.append(path, dot);
+    return { id: p.id, el, path, dot, w: 0, h: 0, op: 0, target: 0, x: undefined, y: 0, on: false };
+  });
+  requestAnimationFrame(measureLabels);
+}
+function measureLabels() { LBL.forEach((l) => { l.w = l.el.offsetWidth; l.h = l.el.offsetHeight; }); }
+function updateBounds() {
+  if (isNarrow()) { bounds = { L: 8, R: innerWidth - 8 }; return; }
+  bounds = { L: $('#list').getBoundingClientRect().right + 12, R: $('#info').getBoundingClientRect().left - 12 };
+}
+const _pr = V3(), _pw = V3(), _cw = V3(), _rw = V3();
+function project(v) {
+  _pr.copy(v).project(camera);
+  return { x: (_pr.x * 0.5 + 0.5) * innerWidth, y: (-_pr.y * 0.5 + 0.5) * innerHeight, z: _pr.z };
+}
+function layoutSide(arr, side, cs, rpx) {
+  const gap = 29, top = 92, bottom = innerHeight - 92, ys = arr.map((i) => i.ay);
+  for (let k = 1; k < ys.length; k++) ys[k] = Math.max(ys[k], ys[k - 1] + gap);
+  if (ys.length && ys[ys.length - 1] > bottom) {
+    ys[ys.length - 1] = bottom;
+    for (let k = ys.length - 2; k >= 0; k--) ys[k] = Math.min(ys[k], ys[k + 1] - gap);
+  }
+  if (ys.length && ys[0] < top) { ys[0] = top; for (let k = 1; k < ys.length; k++) ys[k] = Math.max(ys[k], ys[k - 1] + gap); }
+  arr.forEach((it, k) => {
+    const L = it.L, w = L.w || 120, h = L.h || 24;
+    let x = side > 0 ? cs.x + rpx + 36 : cs.x - rpx - 36 - w;
+    x = Math.min(Math.max(x, bounds.L), bounds.R - w);
+    const y = ys[k] - h / 2;
+    if (L.x === undefined || L.op < 0.03) { L.x = x; L.y = y; } else { L.x += (x - L.x) * 0.22; L.y += (y - L.y) * 0.22; }
+    L.el.style.transform = `translate3d(${L.x.toFixed(1)}px,${L.y.toFixed(1)}px,0)`;
+    const ex = side > 0 ? L.x : L.x + w, ey = L.y + h / 2;
+    L.path.setAttribute('d', `M${it.ax.toFixed(1)},${it.ay.toFixed(1)} L${ex.toFixed(1)},${ey.toFixed(1)}`);
+    L.dot.setAttribute('cx', it.ax.toFixed(1)); L.dot.setAttribute('cy', it.ay.toFixed(1));
+  });
+}
+/* Etiquetas en filas arriba/abajo (formas alargadas como el bacilo) */
+const _ra = V3(), _rb = V3(), _ru = V3();
+function layoutRows(cell, items) {
+  const pa = project(cell.group.localToWorld(_ra.copy(cell.axis[0])));
+  const pb = project(cell.group.localToWorld(_rb.copy(cell.axis[1])));
+  cell.group.localToWorld(_ru.copy(cell.center || V3()));
+  const pc = project(_ru);
+  _ru.add(_rb.setFromMatrixColumn(camera.matrixWorld, 1).multiplyScalar(cell.radiusV * cell.group.scale.x));
+  const rv = Math.abs(project(_ru).y - pc.y);
+  const dx = pb.x - pa.x, dy = pb.y - pa.y, sg = dx < 0 ? -1 : 1;
+  const top = [], bot = [];
+  for (const it of items) ((dx * (it.ay - pa.y) - dy * (it.ax - pa.x)) * sg < 0 ? top : bot).push(it);
+  const axd = (it) => Math.abs(dx * (it.ay - pa.y) - dy * (it.ax - pa.x));
+  while (top.length - bot.length > 1) { top.sort((a, b) => axd(a) - axd(b)); bot.push(top.shift()); }
+  while (bot.length - top.length > 1) { bot.sort((a, b) => axd(a) - axd(b)); top.push(bot.shift()); }
+  const yTop = Math.max(118, Math.min(pa.y, pb.y) - rv - 28);
+  const yBot = Math.min(innerHeight - 124, Math.max(pa.y, pb.y) + rv + 28);
+  const row = (arr, y, up) => {
+    arr.sort((a, b) => a.ax - b.ax);
+    const gap = 10, ws = arr.map((it) => it.L.w || 110), xs = arr.map((it, k) => it.ax - ws[k] / 2), n = xs.length;
+    for (let k = 1; k < n; k++) xs[k] = Math.max(xs[k], xs[k - 1] + ws[k - 1] + gap);
+    if (n && xs[n - 1] + ws[n - 1] > bounds.R) {
+      xs[n - 1] = bounds.R - ws[n - 1];
+      for (let k = n - 2; k >= 0; k--) xs[k] = Math.min(xs[k], xs[k + 1] - ws[k] - gap);
+    }
+    if (n && xs[0] < bounds.L) { xs[0] = bounds.L; for (let k = 1; k < n; k++) xs[k] = Math.max(xs[k], xs[k - 1] + ws[k - 1] + gap); }
+    arr.forEach((it, k) => {
+      const L = it.L, w = ws[k], h = L.h || 24;
+      const yy = up ? y - h - (k % 2) * 24 : y + (k % 2) * 24;
+      if (L.x === undefined || L.op < 0.03) { L.x = xs[k]; L.y = yy; } else { L.x += (xs[k] - L.x) * 0.22; L.y += (yy - L.y) * 0.22; }
+      L.el.style.transform = `translate3d(${L.x.toFixed(1)}px,${L.y.toFixed(1)}px,0)`;
+      const ex = L.x + w / 2, ey = up ? L.y + h : L.y;
+      L.path.setAttribute('d', `M${it.ax.toFixed(1)},${it.ay.toFixed(1)} L${ex.toFixed(1)},${ey.toFixed(1)}`);
+      L.dot.setAttribute('cx', it.ax.toFixed(1)); L.dot.setAttribute('cy', it.ay.toFixed(1));
+    });
+  };
+  row(top, yTop, true);
+  row(bot, yBot, false);
+}
+function updateLabels(dt) {
+  const cell = cells[S.cell];
+  const showAll = S.labels && !isNarrow() && cell.vis > 0.97;
+  cell.group.localToWorld(_cw.copy(cell.center || V3()));
+  const cs = project(_cw);
+  _rw.setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(cell.radius * cell.group.scale.x).add(_cw);
+  const rs = project(_rw), rpx = Math.hypot(rs.x - cs.x, rs.y - cs.y);
+  const camDist = camera.position.distanceTo(_cw), items = [];
+  const zoomed = !!S.sel && camera.position.distanceTo(controls.target) < VIEWS[S.cell].dist * 0.55;
+  for (const L of LBL) {
+    const part = cell.parts.get(L.id);
+    const focus = L.id === S.sel || L.id === S.hover;
+    L.target = 0;
+    if (part && part.anchor && ((showAll && !zoomed) || (focus && cell.vis > 0.97))) {
+      anchorWorld(cell, part, _pw);
+      const sp = project(_pw);
+      if (sp.z < 1 && sp.z > -1) {
+        const behind = camera.position.distanceTo(_pw) > camDist + (cell.behind ?? cell.radius * 0.25);
+        L.target = focus ? 1 : behind ? 0.42 : 0.95;
+        items.push({ L, ax: sp.x, ay: sp.y });
+      }
+    }
+  }
+  if (cell.labelMode === 'rows') layoutRows(cell, items);
+  else {
+    const left = items.filter((i) => i.ax < cs.x), right = items.filter((i) => i.ax >= cs.x);
+    const cd = (it) => Math.abs(it.ax - cs.x);
+    while (right.length - left.length > 2) { right.sort((a, b) => cd(a) - cd(b)); left.push(right.shift()); }
+    while (left.length - right.length > 2) { left.sort((a, b) => cd(a) - cd(b)); right.push(left.shift()); }
+    layoutSide(left.sort((a, b) => a.ay - b.ay), -1, cs, rpx);
+    layoutSide(right.sort((a, b) => a.ay - b.ay), 1, cs, rpx);
+  }
+  for (const L of LBL) {
+    L.op += (L.target - L.op) * Math.min(1, dt * 9);
+    const o = L.op < 0.01 ? 0 : L.op;
+    L.el.style.opacity = o.toFixed(3);
+    L.el.style.pointerEvents = o > 0.3 ? 'auto' : 'none';
+    L.path.style.opacity = (o * 0.9).toFixed(3);
+    L.dot.style.opacity = o.toFixed(3);
+    const on = L.id === S.sel || L.id === S.hover;
+    if (on !== L.on) { L.on = on; L.el.classList.toggle('on', on); L.path.classList.toggle('on', on); }
+  }
+}
+
+/* ---------- escala ---------- */
+const scaleBar = $('#scale .bar'), scaleTxt = $('#scale span');
+let scaleAcc = 1;
+function updateScale(dt) {
+  scaleAcc += dt;
+  if (scaleAcc < 0.12) return;
+  scaleAcc = 0;
+  const cell = cells[S.cell], d = camera.position.distanceTo(controls.target);
+  const ppu = innerHeight / (2 * d * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+  const pxPerUm = (ppu * cell.group.scale.x) / INFO[S.cell].umPerUnit;
+  let best = 0.02;
+  for (const n of [0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20, 50]) if (n * pxPerUm <= 130) best = n;
+  scaleBar.style.width = Math.max(8, best * pxPerUm).toFixed(0) + 'px';
+  scaleTxt.textContent = best < 1 ? Math.round(best * 1000) + ' nm' : String(best).replace('.', ',') + ' µm';
+}
+
+/* ---------- cambio de célula ---------- */
+const seg = $('#seg'), segInd = seg.querySelector('.seg-ind');
+function updateSeg() {
+  const btns = [...seg.querySelectorAll('button')], b = btns.find((x) => x.dataset.cell === S.cell);
+  btns.forEach((x) => x.classList.toggle('on', x === b));
+  segInd.style.width = b.offsetWidth + 'px';
+  segInd.style.transform = `translateX(${b.offsetLeft - 4}px)`;
+  seg.classList.toggle('pro', S.cell === 'pro');
+}
+function setCell(key) {
+  if (key === S.cell) return;
+  S.cell = key; S.sel = null; S.hover = null;
+  stopTour();
+  const c = cells[key];
+  c.delay = 0.3; c.cutT = 0;
+  $('#badgeT').textContent = INFO[key].badge[0];
+  $('#badgeS').textContent = INFO[key].badge[1];
+  updateSeg(); renderList(); renderInfo(); buildLabels();
+  flyHome(1.5);
+}
+seg.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setCell(b.dataset.cell); });
+
+/* ---------- recorrido guiado ---------- */
+function startTour() { S.tour = true; setOn('tbTour', true); step(1); }
+function stopTour() { S.tour = false; setOn('tbTour', false); }
+
+/* ---------- barra de herramientas ---------- */
+function setOn(id, v) { $('#' + id).classList.toggle('on', v); }
+const tb = (id, fn) => $('#' + id).addEventListener('click', fn);
+tb('tbRotate', () => { S.rot = !S.rot; setOn('tbRotate', S.rot); });
+tb('tbCut', () => { S.cut = !S.cut; setOn('tbCut', S.cut); });
+tb('tbLabels', () => { S.labels = !S.labels; setOn('tbLabels', S.labels); });
+tb('tbTour', () => (S.tour ? stopTour() : startTour()));
+tb('tbPause', () => {
+  S.paused = !S.paused; setOn('tbPause', S.paused);
+  $('#tbPause span').textContent = S.paused ? 'Reanudar' : 'Pausa';
+  $('#tbPause svg').innerHTML = S.paused ? '<path d="M7 4.5v15l13-7.5z"/>' : '<path d="M9 5v14M15 5v14"/>';
+});
+tb('tbReset', () => { select(null, { focus: false }); flyHome(1.2); });
+tb('tbFull', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+  else document.exitFullscreen?.();
+});
+
+/* ---------- modal comparativo ---------- */
+const modal = $('#modal');
+function openModal() {
+  $('#cmpTable').innerHTML = `<thead><tr><th></th><th>Eucariota</th><th>Procariota</th></tr></thead><tbody>${CMP.rows.map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}</tbody>`;
+  $('#cmpSame').innerHTML = CMP.same;
+  modal.classList.remove('hidden');
+}
+function closeModal() { modal.classList.add('hidden'); }
+$('#btnCompare').addEventListener('click', openModal);
+$('#modalX').addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+/* ---------- puntero ---------- */
+let pDown = null, hoverQ = null;
+canvas.addEventListener('pointerdown', (e) => { pDown = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+canvas.addEventListener('pointermove', (e) => {
+  hoverQ = e.buttons ? null : { x: e.clientX, y: e.clientY };
+  tipEl.style.left = e.clientX + 'px'; tipEl.style.top = e.clientY + 'px';
+});
+canvas.addEventListener('pointerleave', () => { hoverQ = null; setHover(null); });
+canvas.addEventListener('pointerup', (e) => {
+  if (!pDown) return;
+  const moved = Math.hypot(e.clientX - pDown.x, e.clientY - pDown.y);
+  if (moved < 6 && performance.now() - pDown.t < 650 && e.button === 0) {
+    const h = pickAt(cells[S.cell], e.clientX, e.clientY);
+    if (h) select(h.id); else select(null, { focus: false });
+  }
+  pDown = null;
+});
+let hintHidden = false;
+controls.addEventListener('start', () => {
+  fly.on = false;
+  if (!hintHidden) { hintHidden = true; setTimeout(() => { $('#hint').style.opacity = '0'; }, 2500); }
+});
+addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'escape') { if (!modal.classList.contains('hidden')) closeModal(); else select(null, { focus: false }); }
+  else if (k === '1') setCell('euk');
+  else if (k === '2') setCell('pro');
+  else if (k === 'c') $('#tbCut').click();
+  else if (k === 'l') $('#tbLabels').click();
+  else if (k === 'a') $('#tbRotate').click();
+  else if (k === 't') $('#tbTour').click();
+  else if (k === 'r') $('#tbReset').click();
+  else if (k === 'f') $('#tbFull').click();
+  else if (k === 'i' && S.sel) { S.iso = !S.iso; renderInfo(); }
+  else if (k === ' ') { e.preventDefault(); $('#tbPause').click(); }
+  else if (k === 'arrowright' || k === 'arrowdown') { e.preventDefault(); step(1); }
+  else if (k === 'arrowleft' || k === 'arrowup') { e.preventDefault(); step(-1); }
+});
+
+/* ---------- tamaño de ventana ---------- */
+/* Centra la célula en el espacio libre entre paneles (y sobre la ficha en móviles) */
+const VO = { x: 0, y: 0, tx: 0, ty: 0 };
+function computeViewOffset() {
+  const w = innerWidth, h = innerHeight;
+  if (isNarrow()) {
+    const bottom = S.sel ? infoEl.getBoundingClientRect().top : h - 136;
+    VO.tx = 0; VO.ty = Math.round(h / 2 - (66 + bottom) / 2);
+  } else { VO.tx = Math.round(w / 2 - (bounds.L + bounds.R) / 2); VO.ty = 0; }
+}
+function applyViewOffset(force) {
+  const w = innerWidth, h = innerHeight;
+  if (force) { VO.x = VO.tx; VO.y = VO.ty; }
+  camera.aspect = w / h;
+  camera.setViewOffset(w, h, VO.x, VO.y, w, h);
+}
+function onResize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  composer.setSize(w, h);
+  infoEl.classList.toggle('collapsed', isNarrow() && !S.sel);
+  measureLabels(); updateBounds(); computeViewOffset(); applyViewOffset(true); updateSeg();
+}
+addEventListener('resize', onResize);
+
+/* ---------- bucle ---------- */
+const clock = new THREE.Clock();
+let simT = 0, first = true;
+function frame() {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (!S.paused) simT += dt;
+  U.time.value = simT;
+
+  for (const c of Object.values(cells)) {
+    const want = c.key === S.cell;
+    if (want && c.delay > 0) c.delay -= dt;
+    else c.vis = clamp01(c.vis + (want ? dt / 1.15 : -dt / 0.45));
+    const on = c.vis > 0.001;
+    c.group.visible = on;
+    if (!on) continue;
+    const s = Math.max(0.001, want ? ease.back(c.vis) : ease.out(c.vis));
+    c.group.scale.setScalar(s);
+    c.group.rotation.y = want ? (1 - ease.out(c.vis)) * -0.9 : (1 - c.vis) * 0.6;
+    c.group.updateMatrixWorld(true);
+    const cutWant = S.cut && want && c.vis > 0.65;
+    c.cutT = clamp01(c.cutT + (cutWant ? dt / 1.6 : -dt / 0.9));
+    const ct = ease.inOut(c.cutT);
+    for (const k of c.cutters) k.set(ct, c.group);
+    for (const cap of c.caps) syncCap(cap, cap.userData.cutter.v);
+    if (!S.paused) for (const f of c.tick) f(simT, dt);
+  }
+
+  if (hoverQ && !pDown) { const h = pickAt(cells[S.cell], hoverQ.x, hoverQ.y); setHover(h ? h.id : null, true); hoverQ = null; }
+  applyHighlights(dt);
+
+  if (S.tour) { S.tourT += dt; if (S.tourT > 7) step(1); }
+
+  if (fly.on) {
+    fly.t += dt / fly.dur;
+    const k = ease.inOut(Math.min(1, fly.t));
+    controls.target.lerpVectors(fly.q0, fly.q1, k);
+    const q = new THREE.Quaternion().setFromUnitVectors(fly.d0, fly.d1);
+    const d = fly.d0.clone().applyQuaternion(new THREE.Quaternion().slerp(q, k));
+    camera.position.copy(controls.target).addScaledVector(d, fly.r0 + (fly.r1 - fly.r0) * k);
+    if (fly.t >= 1) fly.on = false;
+  }
+  if (Math.abs(VO.x - VO.tx) > 0.5 || Math.abs(VO.y - VO.ty) > 0.5) {
+    const k = Math.min(1, dt * 6);
+    VO.x += (VO.tx - VO.x) * k; VO.y += (VO.ty - VO.y) * k;
+    applyViewOffset();
+  }
+  controls.autoRotate = S.rot && !fly.on;
+  controls.update();
+
+  const cur = cells[S.cell];
+  cur.group.localToWorld(innerLight.position.copy(cur.center || V3()));
+  bgTint.value.lerp(BG[S.cell], Math.min(1, dt * 1.5));
+
+  composer.render();
+  updateLabels(dt);
+  updateScale(dt);
+
+  if (first) {
+    first = false;
+    window.__ok = true;
+    setTimeout(() => $('#loader').classList.add('done'), 120);
+  }
+}
+
+renderList(); renderInfo(); buildLabels(); updateSeg(); updateBounds(); computeViewOffset(); applyViewOffset(true);
+flyHome(0);
+document.fonts?.ready.then(() => { measureLabels(); updateSeg(); updateBounds(); computeViewOffset(); });
+window.__cell = { THREE, scene, camera, controls, renderer, cells, S, select, setCell };
+requestAnimationFrame(frame);
+
+</script>
+</body>
+</html>
