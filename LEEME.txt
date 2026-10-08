@@ -8,7 +8,9 @@ No necesita internet ni servidor: todo lo que usa está en esta carpeta.
 
 Qué hay en la carpeta
 ---------------------
-celula.html              La página: modelos 3D, animaciones, textos e interfaz.
+celula.html              La página 3D: modelos, animaciones e interfaz.
+celula2d.html            La versión 2D: ilustración plana interactiva (se abre con el botón 2D o la tecla V).
+datos.js                 Textos de cada estructura, compartidos por las dos vistas.
 index.html               Entrada para la web: redirige a celula.html (GitHub Pages abre index.html).
 .nojekyll                Archivo vacío: le indica a GitHub Pages que publique los archivos tal cual.
 lib/three-bundle.js      three.js r160 (motor 3D) con los complementos que usa la página:
@@ -17,7 +19,7 @@ lib/LICENSE-three.txt    Licencia MIT de three.js.
 fonts/fuentes.css        Tipografías Inter y Space Grotesk, incrustadas.
 fonts/OFL-*.txt          Licencias de las tipografías (SIL Open Font License 1.1).
 
-Si movés o copiás el proyecto, llevá la carpeta completa: celula.html necesita lib/ y fonts/ a su lado.
+Si movés o copiás el proyecto, llevá la carpeta completa: celula.html necesita datos.js, lib/ y fonts/ a su lado.
 
 Publicar en GitHub Pages
 ------------------------
@@ -35,5 +37,5 @@ por hardware activada.
 Controles
 ---------
 Arrastrar: rotar · Rueda o pellizco: acercar · Clic derecho: desplazar · Clic: ver información
-Teclas: 1 / 2 cambia de célula · C corte · L etiquetas · T recorrido · R vista · Espacio pausa
+Teclas: 1 / 2 cambia de célula · V cambia entre 3D y 2D · C corte · L etiquetas · T recorrido · R vista · Espacio pausa
         Flechas: estructura anterior / siguiente · Esc: cerrar
