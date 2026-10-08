@@ -233,6 +233,8 @@ a.btn{text-decoration:none}
 .ip-detail{width:100%;justify-content:center;margin-top:8px;height:40px;
   background:color-mix(in srgb,var(--c,#5ec8ff) 20%,transparent);border-color:color-mix(in srgb,var(--c,#5ec8ff) 70%,transparent)}
 .ip-detail:hover{background:color-mix(in srgb,var(--c,#5ec8ff) 32%,transparent)}
+.ip-src{margin-top:12px;font-size:11.5px!important;line-height:1.5!important;color:var(--mut)!important}
+.ip-src b{color:#c7d5ec;font-weight:600}
 .src{margin-top:16px}
 .src h4{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:var(--mut);margin-bottom:8px;font-weight:600}
 .src ol{padding-left:20px;display:grid;gap:6px;font-size:12px;line-height:1.45;color:#b9c8e2}
@@ -448,46 +450,59 @@ function buildEuk() {
   for (let i = 0; i < 7; i++) sparks.push({ mt: mts[(i * 5 + 2) % mts.length], off: rr(0, 1), sp: rr(0.07, 0.13), e: el('circle', { r: 2.8, fill: '#e6f7ff', class: 'nohit' }, gSk) });
   c.anchors.citoesqueleto = [EC.x + 0.62 * (memPt(0.15, 0, 0.94)[0] - EC.x) + 70, 380];
 
-  /* --- RE liso: túbulos ramificados --- */
+  /* --- RE liso: túbulos ramificados (por debajo del RE rugoso, del que es continuación) --- */
   const gRel = part(c, 'rel');
   for (let i = 0; i < 6; i++) {
-    const pts = [], y0 = 560 + i * 12;
-    for (let k = 0; k < 7; k++) pts.push([505 + k * 24 + rr(-6, 6), y0 + Math.sin(k * 1.3 + i) * 13 + rr(-4, 4)]);
+    const pts = [], y0 = 580 + i * 9;
+    for (let k = 0; k < 7; k++) pts.push([548 + k * 21 + rr(-5, 5), y0 + Math.sin(k * 1.3 + i) * 10 + rr(-3, 3)]);
     const d = smooth(pts, false);
     el('path', { d, fill: 'none', stroke: '#8fa53a', 'stroke-width': 8, 'stroke-linecap': 'round' }, gRel);
     el('path', { d, fill: 'none', stroke: '#c6e05f', 'stroke-width': 5, 'stroke-linecap': 'round' }, gRel);
   }
   for (let i = 0; i < 6; i++) {
-    const x = 520 + i * 26 + rr(-6, 6);
-    const d = `M${f1(x)},${f1(560 + rr(-4, 4))}Q${f1(x + rr(-14, 14))},${590} ${f1(x + rr(-10, 10))},${f1(622 + rr(-4, 4))}`;
+    const x = 558 + i * 22 + rr(-5, 5);
+    const d = `M${f1(x)},${f1(578 + rr(-4, 4))}Q${f1(x + rr(-12, 12))},${604} ${f1(x + rr(-8, 8))},${f1(630 + rr(-3, 3))}`;
     el('path', { d, fill: 'none', stroke: '#8fa53a', 'stroke-width': 7, 'stroke-linecap': 'round' }, gRel);
     el('path', { d, fill: 'none', stroke: '#c6e05f', 'stroke-width': 4, 'stroke-linecap': 'round' }, gRel);
   }
-  c.anchors.rel = [590, 592];
+  /* unión con la cisterna más externa del RE rugoso */
+  { const p = nucPt(1.15, 61), d = `M${f1(p[0])},${f1(p[1])}Q${f1(p[0] + 4)},${f1(p[1] + 22)} 560,582`;
+    el('path', { d, fill: 'none', stroke: '#8fa53a', 'stroke-width': 8, 'stroke-linecap': 'round' }, gRel);
+    el('path', { d, fill: 'none', stroke: '#c6e05f', 'stroke-width': 5, 'stroke-linecap': 'round' }, gRel); }
+  c.anchors.rel = [615, 606];
 
-  /* --- RE rugoso: cisternas alrededor del núcleo, salpicadas de ribosomas --- */
+  /* --- RE rugoso: cisternas que rodean todo el núcleo, continuas con la envoltura nuclear --- */
   const gRer = part(c, 'rer');
   const rerRibs = el('g', {}, gRer);
+  const NS = 3;
   for (let k = 0; k < 4; k++) {
-    const dr = 30 + k * 17, a0 = 2.25 + k * 0.05, a1 = 4.35 - k * 0.04, pts = [], ribs = [];
-    for (let i = 0; i <= 40; i++) {
-      const a = a0 + ((a1 - a0) * i) / 40, w = 0.018 * Math.sin(a * 9 + k * 2);
-      pts.push(nucPt(a, dr, w));
-    }
-    const d = smooth(pts, false);
-    el('path', { d, fill: 'none', stroke: '#c94f7a', 'stroke-width': 10, 'stroke-linecap': 'round' }, gRer);
-    el('path', { d, fill: 'none', stroke: '#f07ca0', 'stroke-width': 7, 'stroke-linecap': 'round' }, gRer);
-    el('path', { d, fill: 'none', stroke: '#ffc6d8', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: 0.8 }, gRer);
-    for (let i = 1; i < 40; i++) {
-      for (const sd of [-1, 1]) {
-        const a = a0 + ((a1 - a0) * (i + (sd > 0 ? 0.5 : 0))) / 40, w = 0.018 * Math.sin(a * 9 + k * 2);
-        const p = nucPt(a, dr + sd * 7, w);
-        ribs.push(`M${f1(p[0])},${f1(p[1])}h0.01`);
+    const dr = 22 + k * 13, off = k * 0.7 + 0.3;
+    for (let j = 0; j < NS; j++) {
+      const a0 = off + (j * TAU) / NS + 0.1, a1 = off + ((j + 1) * TAU) / NS - 0.1, pts = [], ribs = [];
+      for (let i = 0; i <= 40; i++) {
+        const a = a0 + ((a1 - a0) * i) / 40, w = 0.012 * Math.sin(a * 9 + k * 2);
+        pts.push(nucPt(a, dr, w));
       }
+      const d = smooth(pts, false);
+      el('path', { d, fill: 'none', stroke: '#c94f7a', 'stroke-width': 8, 'stroke-linecap': 'round' }, gRer);
+      el('path', { d, fill: 'none', stroke: '#f07ca0', 'stroke-width': 5.5, 'stroke-linecap': 'round' }, gRer);
+      el('path', { d, fill: 'none', stroke: '#ffc6d8', 'stroke-width': 1.6, 'stroke-linecap': 'round', opacity: 0.8 }, gRer);
+      for (let i = 1; i < 40; i++) {
+        for (const sd of [-1, 1]) {
+          const a = a0 + ((a1 - a0) * (i + (sd > 0 ? 0.5 : 0))) / 40, w = 0.012 * Math.sin(a * 9 + k * 2);
+          const p = nucPt(a, dr + sd * 5.6, w);
+          ribs.push(`M${f1(p[0])},${f1(p[1])}h0.01`);
+        }
+      }
+      el('path', { d: ribs.join(''), stroke: '#5b60ff', 'stroke-width': 3.8, 'stroke-linecap': 'round' }, rerRibs);
     }
-    el('path', { d: ribs.join(''), stroke: '#5b60ff', 'stroke-width': 4.6, 'stroke-linecap': 'round' }, rerRibs);
   }
-  c.anchors.rer = nucPt(3.15, 47);
+  /* conexiones: la membrana nuclear externa se continúa con la primera cisterna */
+  for (const a of [0.9, 2.6, 4.4, 5.6]) {
+    const p0 = nucPt(a, 9), p1 = nucPt(a, 22);
+    el('path', { d: `M${f1(p0[0])},${f1(p0[1])}L${f1(p1[0])},${f1(p1[1])}`, stroke: '#f07ca0', 'stroke-width': 5, 'stroke-linecap': 'round' }, gRer);
+  }
+  c.anchors.rer = nucPt(3.15, 41);
 
   /* --- ribosomas libres y polisomas --- */
   const gRib = part(c, 'ribosomas');
@@ -542,11 +557,11 @@ function buildEuk() {
 
   /* --- lisosomas y peroxisomas --- */
   const gLy = part(c, 'lisosomas');
-  for (const [x, y, r] of [[560, 178, 15], [708, 572, 16], [395, 196, 13]]) {
+  for (const [x, y, r] of [[560, 178, 15], [745, 525, 16], [395, 196, 13]]) {
     el('circle', { cx: x, cy: y, r, fill: 'url(#gLyso)', stroke: '#fff1b8', 'stroke-width': 1.5 }, gLy);
     for (let i = 0; i < 6; i++) { const a = rr(0, TAU), d = rr(0, r * 0.6); el('circle', { cx: f1(x + d * Math.cos(a)), cy: f1(y + d * Math.sin(a)), r: 1.6, fill: '#9a6a10' }, gLy); }
   }
-  c.anchors.lisosomas = [708, 572];
+  c.anchors.lisosomas = [745, 525];
   const gPe = part(c, 'peroxisomas');
   for (const [x, y, r] of [[238, 300, 13], [478, 668, 12], [742, 300, 12]]) {
     el('circle', { cx: x, cy: y, r, fill: 'url(#gPerox)', stroke: '#c9f5da', 'stroke-width': 1.5 }, gPe);
@@ -839,7 +854,7 @@ const screenC = () => [(region.x0 + region.x1) / 2, (region.y0 + region.y1) / 2]
 function homeView() {
   const c = cells[S.cell], b = c.bbox, labels = S.labels && !isNarrow();
   const rw = region.x1 - region.x0, rh = region.y1 - region.y0;
-  const mx = labels && c.labelMode === 'sides' ? 330 : 30, my = labels && c.labelMode === 'rows' ? 150 : 20;
+  const mx = labels && c.labelMode === 'sides' ? Math.min(330, rw * 0.4) : 30, my = labels && c.labelMode === 'rows' ? Math.min(150, rh * 0.3) : 20;
   const k = Math.max(0.15, Math.min((rw - mx) / b.w, (rh - my) / b.h));
   homeK = k;
   return { cx: b.x + b.w / 2, cy: b.y + b.h / 2, k };
@@ -904,6 +919,7 @@ function renderInfo() {
       <div class="ip-head" style="--c:${C.color}"><div><h3 style="font-size:25px;margin-top:4px">${C.title}</h3></div></div>
       <p>${C.desc}</p>
       <div class="ip-grid">${C.facts.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>
+      ${C.basis ? `<p class="ip-src"><b>Basado en:</b> ${C.basis}</p>` : ''}
       <div class="ip-fact" style="--c:${C.color}"><b>Cómo explorar</b>Hacé clic en cualquier estructura del dibujo, de la lista o de las etiquetas. Con <em>Recorrido</em> las ves todas, una por una. ¿Querés girarla? Pasá a la vista <em>3D</em>.</div>
       <div class="ip-actions" style="--c:${C.color}"><button class="btn" data-act="tour">Recorrido guiado</button><button class="btn" data-act="cmp">Comparar</button></div>`;
   } else {
