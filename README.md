@@ -87,6 +87,7 @@ Los textos y los modelos se revisaron con estas fuentes. La lista también apare
 - Singer y Nicolson (1972), modelo de mosaico fluido — [Science](https://doi.org/10.1126/science.175.4023.720)
 - Ou y col. (2017), ChromEMT: estructura de la cromatina en células — [Science](https://doi.org/10.1126/science.aag0025)
 - Kühlbrandt (2015), complejos de la membrana mitocondrial — [BMC Biology](https://doi.org/10.1186/s12915-015-0201-x)
+- Revisión sobre la arquitectura de las crestas mitocondriales (2021) — [PMC](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8306996/)
 - Anderson y col. (1981), genoma mitocondrial humano — [Nature](https://doi.org/10.1038/290457a0)
 - Ballabio (2016), *The awesome lysosome* — [EMBO Mol. Med.](https://doi.org/10.15252/emmm.201505966)
 - Berg (2003), el motor rotatorio del flagelo bacteriano — [Annu. Rev. Biochem.](https://doi.org/10.1146/annurev.biochem.72.121801.161737)
