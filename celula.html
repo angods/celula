@@ -128,6 +128,8 @@ header.top{position:fixed;z-index:10;top:14px;left:14px;right:14px;height:62px;b
 .ip-detail{width:100%;justify-content:center;margin-top:8px;height:40px;
   background:color-mix(in srgb,var(--c,#5ec8ff) 20%,transparent);border-color:color-mix(in srgb,var(--c,#5ec8ff) 70%,transparent)}
 .ip-detail:hover{background:color-mix(in srgb,var(--c,#5ec8ff) 32%,transparent)}
+.ip-src{margin-top:12px;font-size:11.5px!important;line-height:1.5!important;color:var(--mut)!important}
+.ip-src b{color:#c7d5ec;font-weight:600}
 .src{margin-top:16px}
 .src h4{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:var(--mut);margin-bottom:8px;font-weight:600}
 .src ol{padding-left:20px;display:grid;gap:6px;font-size:12px;line-height:1.45;color:#b9c8e2}
@@ -391,7 +393,7 @@ const DPR = Math.min(window.devicePixelRatio || 1, 2);
 renderer.setPixelRatio(DPR);
 renderer.setSize(innerWidth, innerHeight, false);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.95;
+renderer.toneMappingExposure = 0.85;
 renderer.localClippingEnabled = true;
 
 const scene = new THREE.Scene();
@@ -423,7 +425,7 @@ const composer = new EffectComposer(renderer, rt);
 composer.setPixelRatio(DPR);
 composer.setSize(innerWidth, innerHeight);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.3, 0.5, 0.9);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.16, 0.4, 1.15);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -549,7 +551,7 @@ function pmat(color, o = {}) {
     clearcoat: o.cc ?? 0.55, clearcoatRoughness: o.ccr ?? 0.3,
     sheen: o.sheen ?? 0.12, sheenRoughness: 0.6, sheenColor: col(o.sheenColor ?? 0xffffff),
     emissive: col(o.emissive ?? color), emissiveIntensity: o.emi ?? 0.05,
-    envMapIntensity: o.env ?? 0.7, side: o.side ?? THREE.FrontSide,
+    envMapIntensity: o.env ?? 0.5, side: o.side ?? THREE.FrontSide,
     transparent: !!o.transparent, opacity: o.opacity ?? 1, depthWrite: o.depthWrite ?? true,
     flatShading: !!o.flat, vertexColors: !!o.vcol,
   });
@@ -566,7 +568,7 @@ function applyMat(m, hl, dim) {
   }
   const b = m.userData.base; if (!b) return;
   m.color.copy(b.color).lerp(DIMC, dim * 0.8);
-  m.emissiveIntensity = b.emi * (1 - dim) + hl * 0.6;
+  m.emissiveIntensity = b.emi * (1 - dim) + hl * 0.35;
   if (m.transparent) m.opacity = b.opacity * (1 - dim * 0.65);
 }
 /* Vibración browniana por instancia (ribosomas, gránulos) */
@@ -1677,7 +1679,7 @@ const mkInst = (geo, mat, list, cell, id, o = {}) => {
   return im;
 };
 function glassPlane(cell, id, geo, color, z = -0.03) {
-  const m = new THREE.Mesh(geo.translate(0, 0, z), pmat(color, { transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide, emi: 0.1 }));
+  const m = new THREE.Mesh(geo.translate(0, 0, z), pmat(color, { transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide, emi: 0.04 }));
   m.renderOrder = 3;
   cell.group.add(m);
   own(cell, id, m, { shell: 'glass' });
@@ -1694,39 +1696,34 @@ function moveAlong(cell, list, make) {
   });
 }
 
-/* ---------- Mitocondria ---------- */
+/* ---------- Mitocondria ----------
+   Corte en cuña (como en las ilustraciones de los libros): se quita el cuarto superior
+   delantero a lo largo de todo el orgánulo, así se ven las dos membranas rodeándolo
+   y las crestas por dentro. El botón "Corte" abre y cierra la cuña. */
 function buildMitoDet() {
   R = rng(911);
   const cell = makeCell('mito', 3.4), g = cell.group;
   const RO = 1.5, HL = 2.0, A = V3(-HL, 0, 0), B = V3(HL, 0, 0);
-  const capPts = (r) => {
-    const pts = [];
-    for (let i = 0; i <= 16; i++) { const a = -Math.PI / 2 + (i / 16) * (Math.PI / 2); pts.push(new THREE.Vector2(r * Math.cos(a), -HL + r * Math.sin(a))); }
-    for (let i = 0; i <= 16; i++) { const a = (i / 16) * (Math.PI / 2); pts.push(new THREE.Vector2(r * Math.cos(a), HL + r * Math.sin(a))); }
-    return pts;
-  };
-  /* mitad posterior (z ≤ 0): el corte mira a la cámara */
-  const halfCapsule = (r) => new THREE.LatheGeometry(capPts(r), 56, Math.PI / 2, Math.PI).rotateZ(Math.PI / 2);
-  const ring = (rIn, rOut) => {
-    const s = stadiumInto(new THREE.Shape(), rOut, HL);
-    s.holes.push(stadiumInto(new THREE.Path(), rIn, HL));
-    return new THREE.ShapeGeometry(s, 24).rotateZ(Math.PI / 2);
-  };
+  const cut = new Cutter(V3(9, 9, 9), V3(-99, 0, 0));
+  cell.cutters.push(cut);
+  const box = { mn: [-3.6, -1.6, -1.6], mx: [3.6, 1.6, 1.6] };
+  const capsule = (r) => new THREE.CapsuleGeometry(r, 2 * HL, 20, 64).rotateZ(Math.PI / 2);
   const add = (geo, mat, id, o) => { const m = new THREE.Mesh(geo, mat); g.add(m); own(cell, id, m, o); return m; };
 
-  add(halfCapsule(RO), pmat('#e5484d', { side: THREE.DoubleSide, cc: 0.85, rough: 0.3, sheen: 0.3, sheenColor: '#ffc2c2', emi: 0.08 }), 'membext');
-  add(ring(1.43, 1.5), pmat('#ff7b7f', { side: THREE.DoubleSide, emi: 0.16 }), 'membext');
-  add(ring(1.36, 1.43), pmat('#ffc9a8', { side: THREE.DoubleSide, emi: 0.14, rough: 0.6, cc: 0.1 }), 'intermem');
-  add(halfCapsule(1.33), pmat('#f2a3b2', { side: THREE.DoubleSide, cc: 0.5, rough: 0.4, emi: 0.07 }), 'membint');
-  add(ring(1.29, 1.36), pmat('#ffc2cc', { side: THREE.DoubleSide, emi: 0.16 }), 'membint');
+  add(capsule(RO), pmat('#c8434b', { cutter: cut, side: THREE.DoubleSide, cc: 0.6, rough: 0.4, sheen: 0.2, sheenColor: '#ffc2c2', emi: 0.02 }), 'membext');
+  add(capsule(1.33), pmat('#d9707f', { cutter: cut, side: THREE.DoubleSide, cc: 0.4, rough: 0.45, emi: 0.02 }), 'membint');
+  own(cell, 'membext', makeCap(cell, cut, { A, B, rIn: 1.43, rOut: 1.5, mode: 1, c1: '#e8646c', c2: '#f3b0b0', c3: '#a8303a', ...box }));
+  own(cell, 'intermem', makeCap(cell, cut, { A, B, rIn: 1.36, rOut: 1.43, mode: 0, c1: '#e9b48f', ...box }));
+  own(cell, 'membint', makeCap(cell, cut, { A, B, rIn: 1.29, rOut: 1.36, mode: 1, c1: '#ec8c9a', c2: '#f6c4cc', c3: '#b04a5c', ...box }));
+  own(cell, 'matriz', makeCap(cell, cut, { A, B, rIn: 0, rOut: 1.29, mode: 3, c1: '#6e1a2c', c2: '#d9708a', alpha: 0.2, order: 3, ...box }), { shell: 'glass' });
 
   /* Porinas de la membrana externa */
   const por = [];
-  for (let i = 0; i < 260; i++) {
-    const x = rr(-HL, HL), th = rr(Math.PI, TAU), n = V3(0, Math.cos(th), Math.sin(th));
+  for (let i = 0; i < 360; i++) {
+    const x = rr(-HL, HL), th = rr(0, TAU), n = V3(0, Math.cos(th), Math.sin(th));
     por.push({ p: V3(x, 0, 0).addScaledVector(n, RO + 0.01), q: alignQuat(n) });
   }
-  mkInst(new THREE.CylinderGeometry(0.04, 0.04, 0.035, 10), pmat('#ffd6d6', { emi: 0.2 }), por, cell, 'membext');
+  mkInst(new THREE.CylinderGeometry(0.04, 0.04, 0.035, 10), pmat('#f0b8b8', { cutter: cut, emi: 0.03 }), por, cell, 'membext');
 
   /* Crestas: láminas que nacen de la membrana interna, alternando de arriba y de abajo */
   const ri = (x) => { const ax = Math.abs(x); return ax <= HL ? 1.27 : Math.sqrt(Math.max(0, 1.27 * 1.27 - (ax - HL) * (ax - HL))); };
@@ -1736,41 +1733,39 @@ function buildMitoDet() {
     const r = ri(x);
     if (r < 0.55) continue;
     const top = k % 2 === 0, c = (top ? -1 : 1) * r * rr(0.1, 0.3), tc = Math.acos(c / r), h = r * Math.sin(tc), bul = top ? -0.14 : 0.14;
-    const pt = (th) => [r * Math.cos(th), -r * Math.sin(th)];
+    const pt = (th) => [r * Math.cos(th), r * Math.sin(th)];
     const sh = new THREE.Shape();
     if (top) {
-      sh.moveTo(...pt(0));
-      for (let i = 1; i <= 24; i++) sh.lineTo(...pt((tc * i) / 24));
-      sh.quadraticCurveTo(c + bul, -h / 2, c, 0);
+      sh.moveTo(...pt(-tc));
+      for (let i = 1; i <= 40; i++) sh.lineTo(...pt(-tc + (2 * tc * i) / 40));
     } else {
       sh.moveTo(...pt(tc));
-      for (let i = 1; i <= 24; i++) sh.lineTo(...pt(tc + ((Math.PI - tc) * i) / 24));
-      sh.lineTo(c, 0);
-      sh.quadraticCurveTo(c + bul, -h / 2, c, -h);
+      for (let i = 1; i <= 40; i++) sh.lineTo(...pt(tc + ((TAU - 2 * tc) * i) / 40));
     }
+    sh.quadraticCurveTo(c + bul, 0, c, top ? -h : h);
     sh.closePath();
     const eg = new THREE.ExtrudeGeometry(sh, { depth: D, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.025, bevelSegments: 2, curveSegments: 8 });
     eg.applyMatrix4(new THREE.Matrix4().set(0, 0, 1, x - D / 2, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1));
     crGeos.push(eg);
-    /* borde libre de la cresta (curva de Bézier entre el fondo y el plano de corte) */
-    const tip = (s) => { const u = 1 - s; return [u * u * c + 2 * s * u * (c + bul) + s * s * c, u * u * -h + 2 * s * u * (-h / 2)]; };
+    /* borde libre de la cresta: curva de Bézier entre sus dos uniones con la membrana */
+    const tip = (s) => { const u = 1 - s; return [u * u * c + 2 * s * u * (c + bul) + s * s * c, u * u * -h + s * s * h]; };
     cr.push({ x, r, top, c, h, tip });
   }
-  add(merge(crGeos), pmat('#ff8fa0', { side: THREE.DoubleSide, cc: 0.5, rough: 0.35, emi: 0.1, sheen: 0.3, sheenColor: '#ffd6de' }), 'crestas');
+  add(merge(crGeos), pmat('#e07a8c', { cutter: cut, side: THREE.DoubleSide, cc: 0.4, rough: 0.4, emi: 0.03 }), 'crestas');
 
   /* ATP sintasa (filas en el borde de las crestas) y complejos de la cadena respiratoria (en sus caras) */
   const heads = [], stalks = [], etc = [], qx = alignQuat(V3(1, 0, 0)), qmx = alignQuat(V3(-1, 0, 0));
-  const etcCols = ['#ffd166', '#ffb84d', '#ffe08a', '#f6c445'].map(col);
+  const etcCols = ['#e8b53c', '#d9962a', '#f0c75a', '#c9a032'].map(col);
   for (const C of cr) {
     for (const sg of [-1, 1]) {
-      for (let i = 1; i <= 7; i++) {
-        const [y, z] = C.tip(i / 8);
+      for (let i = 1; i <= 11; i++) {
+        const [y, z] = C.tip(i / 12);
         const b = V3(C.x + sg * (D / 2 + 0.03), y, z);
         stalks.push({ p: b.clone().add(V3(sg * 0.07, 0, 0)), q: sg > 0 ? qx : qmx });
         heads.push({ p: b.clone().add(V3(sg * 0.17, 0, 0)) });
       }
-      for (let i = 0, guard = 0; i < 9 && guard < 300; guard++) {
-        const y = rr(-C.r, C.r), z = rr(-C.r, -0.1);
+      for (let i = 0, guard = 0; i < 14 && guard < 400; guard++) {
+        const y = rr(-C.r, C.r), z = rr(-C.r, C.r);
         if (y * y + z * z > (C.r - 0.1) ** 2) continue;
         if (C.top ? y < C.c + 0.2 : y > C.c - 0.2) continue;
         etc.push({ p: V3(C.x + sg * (D / 2 + 0.035), y, z), q: sg > 0 ? qx : qmx, s: rr(0.8, 1.25), c: etcCols[Math.floor(R() * 4)] });
@@ -1778,30 +1773,29 @@ function buildMitoDet() {
       }
     }
   }
-  const atpH = mkInst(new THREE.SphereGeometry(0.075, 14, 10), pmat('#5ec8ff', { emi: 0.25, cc: 0.6 }), heads, cell, 'atp');
-  mkInst(new THREE.CylinderGeometry(0.022, 0.022, 0.14, 6), pmat('#a8e2ff', { emi: 0.2 }), stalks, cell, 'atp');
-  mkInst(new THREE.CapsuleGeometry(0.05, 0.08, 4, 8), pmat('#ffffff', { emi: 0.18, cc: 0.4 }), etc, cell, 'cadena');
+  mkInst(new THREE.SphereGeometry(0.075, 14, 10), pmat('#3f9fd8', { cutter: cut, emi: 0.03, cc: 0.5 }), heads, cell, 'atp');
+  mkInst(new THREE.CylinderGeometry(0.022, 0.022, 0.14, 6), pmat('#7cc0e6', { cutter: cut, emi: 0.03 }), stalks, cell, 'atp');
+  mkInst(new THREE.CapsuleGeometry(0.05, 0.08, 4, 8), pmat('#ffffff', { cutter: cut, emi: 0.03, cc: 0.4 }), etc, cell, 'cadena');
 
-  /* Matriz: plano de selección translúcido, partículas y gránulos */
-  glassPlane(cell, 'matriz', new THREE.ShapeGeometry(stadiumInto(new THREE.Shape(), 1.29, HL), 24).rotateZ(Math.PI / 2), '#c23a55');
+  /* Matriz: partículas y gránulos de calcio */
   const mp = [];
   while (mp.length < 1800) {
-    const p = V3(rr(-HL - 1.3, HL + 1.3), rr(-1.3, 1.3), rr(-1.3, -0.05));
+    const p = V3(rr(-HL - 1.3, HL + 1.3), rr(-1.3, 1.3), rr(-1.3, 1.3));
     if (segDist(p, A, B) < 1.24) mp.push(p.x, p.y, p.z);
   }
-  const pts = makePoints(mp, { size: 2.0, alpha: 0.14, spin: 0, wob: 0.03, color: '#ff8aa6', order: 5 });
+  const pts = makePoints(mp, { cutter: cut, size: 2.0, alpha: 0.12, spin: 0, wob: 0.03, color: '#ff8aa6', order: 5 });
   g.add(pts); own(cell, 'matriz', pts, { pick: false });
   const gran = [];
-  for (let i = 0; i < 7; i++) { const C = cr[(i * 3 + 1) % cr.length]; gran.push({ p: V3(C.x + 0.23, rr(-0.6, 0.6), rr(-0.9, -0.3)) }); }
-  mkInst(new THREE.SphereGeometry(0.075, 12, 8), pmat('#4a0c1c', { emi: 0.1, rough: 0.5 }), gran, cell, 'matriz');
+  for (let i = 0; i < 8; i++) { const C = cr[(i * 3 + 1) % cr.length]; gran.push({ p: V3(C.x + 0.23, rr(-0.7, 0.2), rr(-0.7, 0.7)) }); }
+  mkInst(new THREE.SphereGeometry(0.075, 12, 8), pmat('#4a0c1c', { cutter: cut, emi: 0.02, rough: 0.5 }), gran, cell, 'matriz');
 
   /* ADN mitocondrial (nucleoides) y mitorribosomas, entre las crestas */
   const gaps = [];
   for (let i = 0; i < cr.length - 1; i++) gaps.push({ x: (cr[i].x + cr[i + 1].x) / 2, r: Math.min(cr[i].r, cr[i + 1].r) });
-  const dnaM = addWrithe(pmat('#b98af0', { emi: 0.3, cc: 0.7, rough: 0.3 }), 0.01, 0.8);
+  const dnaM = addWrithe(pmat('#9b6fd6', { cutter: cut, emi: 0.04, cc: 0.6, rough: 0.35 }), 0.01, 0.8);
   const loops = [];
-  [2, 5, 7].forEach((gi, j) => {
-    const G = gaps[gi % gaps.length], y0 = (j % 2 ? -1 : 1) * 0.35, z0 = -0.45, pp = [];
+  [[2, -0.45, 0.35], [5, -0.3, -0.5], [7, -0.5, 0.25], [9, 0.35, -0.45]].forEach(([gi, y0, z0]) => {
+    const G = gaps[gi % gaps.length], pp = [];
     for (let i = 0; i < 40; i++) { const t = (i / 40) * TAU; pp.push(V3(0.035 * Math.sin(5 * t), 0.24 * Math.cos(t) + 0.04 * Math.sin(3 * t), 0.2 * Math.sin(t))); }
     const m = new THREE.Mesh(tubeGeo(pp, 120, 0.022, 6, true), dnaM);
     m.position.set(G.x, y0, z0);
@@ -1809,64 +1803,70 @@ function buildMitoDet() {
   });
   const ribs = [];
   for (const G of gaps) {
-    for (let i = 0; i < 14; i++) {
-      const y = rr(-G.r + 0.15, G.r - 0.15), z = rr(-G.r + 0.15, -0.08);
+    for (let i = 0; i < 22; i++) {
+      const y = rr(-G.r + 0.15, G.r - 0.15), z = rr(-G.r + 0.15, G.r - 0.15);
       if (y * y + z * z > (G.r - 0.15) ** 2) continue;
       ribs.push({ p: V3(G.x + rr(-0.1, 0.1), y, z), s: rr(0.85, 1.15) });
     }
   }
-  const ribM = mkInst(new THREE.IcosahedronGeometry(0.045, 1), addJitter(pmat('#7a80ff', { emi: 0.3, cc: 0.4 }), 0.01, 2.2), ribs, cell, 'mitorrib');
+  mkInst(new THREE.IcosahedronGeometry(0.045, 1), addJitter(pmat('#5a5fd6', { cutter: cut, emi: 0.04, cc: 0.4 }), 0.01, 2.2), ribs, cell, 'mitorrib');
   cell.tick.push((t) => loops.forEach((m, i) => { m.rotation.x = t * 0.3 + i; }));
 
-  /* Anclas de las etiquetas */
-  const near = (list, fn) => list.reduce((b, it) => (fn(it) > fn(b) ? it : b), list[0]).p.clone();
-  anchor(cell, 'membext', V3(-1.2, RO * Math.cos(0.55), -RO * Math.sin(0.55)), 4.5);
-  anchor(cell, 'intermem', V3(0.85, -1.395, 0.01), 3);
-  anchor(cell, 'membint', V3(-0.5, 1.325, 0.01), 3);
+  /* Anclas de las etiquetas (sobre las caras del corte o la superficie visible) */
+  const best = (list, f) => list.reduce((b, it) => (f(it) > f(b) ? it : b), list[0]).p.clone();
+  const onFace = (it) => (it.p.y < 0.05 && it.p.z > 0.2 ? it.p.z : -9);
+  anchor(cell, 'membext', V3(-1.3, RO * Math.cos(2.0), RO * Math.sin(2.0)), 4.5);
+  anchor(cell, 'intermem', V3(0.9, 0.01, 1.395), 3);
+  anchor(cell, 'membint', V3(-0.6, 1.325, 0.01), 3);
   const C0 = cr.reduce((b, C) => (Math.abs(C.x + 0.9) < Math.abs(b.x + 0.9) ? C : b), cr[0]);
-  anchor(cell, 'crestas', V3(C0.x + D / 2, C0.c, -0.02), 3.5);
-  anchor(cell, 'matriz', V3(gaps[Math.floor(gaps.length / 2)].x, -0.15, -0.05), 4);
-  anchor(cell, 'atp', near(heads.filter((h) => h.p.x > 0.4 && h.p.x < 1.8), (h) => h.p.z), 2.4);
-  anchor(cell, 'cadena', near(etc.filter((h) => h.p.x < -1 && h.p.x > -2.4), (h) => h.p.z), 2.4);
-  anchor(cell, 'adnmt', loops[1], 2.6);
-  anchor(cell, 'mitorrib', near(ribs.filter((h) => h.p.x > 1.4), (h) => h.p.z), 2.4);
+  anchor(cell, 'crestas', V3(C0.x + D / 2, Math.min(0, C0.c), 0.4), 3.5);
+  anchor(cell, 'matriz', V3(gaps[Math.floor(gaps.length / 2)].x, 0.01, 0.6), 4);
+  anchor(cell, 'atp', best(heads.filter((h) => h.p.x > 0.4 && h.p.x < 1.8), onFace), 2.4);
+  anchor(cell, 'cadena', best(etc.filter((h) => h.p.x < -1 && h.p.x > -2.4), onFace), 2.4);
+  anchor(cell, 'adnmt', loops[0], 2.6);
+  anchor(cell, 'mitorrib', best(ribs.filter((h) => h.p.x > 1.4), onFace), 2.4);
   return cell;
 }
 
-/* ---------- Núcleo ---------- */
+/* ---------- Núcleo ----------
+   Esfera completa con una cuña de 90° quitada: la envoltura nuclear (doble membrana con
+   poros) rodea todo el núcleo y el corte deja ver el interior, como en los libros. */
 function buildNucDet() {
   R = rng(1203);
   const cell = makeCell('nuc', 3.9), g = cell.group;
+  const cut = new Cutter(V3(9, 9, 9), V3(0, -99, 0));
+  cell.cutters.push(cut);
+  const box = { mn: [-3.1, -3.1, -3.1], mx: [3.1, 3.1, 3.1] };
+  const inWedge = (p) => p.x > 0 && p.z > 0;
   const add = (geo, mat, id, o) => { const m = new THREE.Mesh(geo, mat); g.add(m); own(cell, id, m, o); return m; };
-  const half = (r) => new THREE.SphereGeometry(r, 112, 72, Math.PI, Math.PI);
-  const ring = (a, b) => new THREE.RingGeometry(a, b, 160, 1);
-  const halfDir = () => { const d = randDir(V3()); if (d.z > 0) d.z = -d.z; return d; };
+  const sphere = (r) => new THREE.SphereGeometry(r, 112, 72);
 
-  add(half(3.02), pmat('#a274e6', { side: THREE.DoubleSide, cc: 0.8, rough: 0.32, sheen: 0.3, sheenColor: '#e6c8ff', emi: 0.06 }), 'membext');
-  add(ring(2.95, 3.02), pmat('#d2a8ff', { side: THREE.DoubleSide, emi: 0.2 }), 'membext');
-  add(ring(2.9, 2.95), pmat('#f3e3ff', { side: THREE.DoubleSide, emi: 0.25 }), 'perinuc');
-  add(half(2.87), pmat('#8b5bd8', { side: THREE.DoubleSide, cc: 0.4, rough: 0.5, emi: 0.06 }), 'membint');
-  add(ring(2.83, 2.9), pmat('#b98af0', { side: THREE.DoubleSide, emi: 0.2 }), 'membint');
-  add(ring(2.76, 2.83), pmat('#8fd8ff', { side: THREE.DoubleSide, emi: 0.3 }), 'lamina');
+  add(sphere(3.02), pmat('#8d63c9', { cutter: cut, side: THREE.DoubleSide, cc: 0.6, rough: 0.4, sheen: 0.2, sheenColor: '#d9c2f5', emi: 0.02 }), 'membext');
+  add(sphere(2.87), pmat('#7a52b8', { cutter: cut, side: THREE.DoubleSide, cc: 0.3, rough: 0.5, emi: 0.02 }), 'membint');
+  own(cell, 'membext', makeCap(cell, cut, { rIn: 2.95, rOut: 3.02, mode: 0, c1: '#b48ae6', ...box }));
+  own(cell, 'perinuc', makeCap(cell, cut, { rIn: 2.9, rOut: 2.95, mode: 0, c1: '#e4d6f5', ...box }));
+  own(cell, 'membint', makeCap(cell, cut, { rIn: 2.83, rOut: 2.9, mode: 0, c1: '#9a72d6', ...box }));
+  own(cell, 'lamina', makeCap(cell, cut, { rIn: 2.76, rOut: 2.83, mode: 0, c1: '#5fa8d6', ...box }));
+  own(cell, 'nucleoplasma', makeCap(cell, cut, { rIn: 0, rOut: 2.76, mode: 3, c1: '#3a2366', c2: '#a98ad9', alpha: 0.18, order: 3, ...box }), { shell: 'glass' });
 
   /* Ribosomas sobre la membrana externa */
   const rib = [];
-  for (let i = 0; i < 650; i++) rib.push({ p: halfDir().multiplyScalar(3.07), s: rr(0.8, 1.2) });
-  mkInst(new THREE.IcosahedronGeometry(0.045, 1), pmat('#5b60ff', { emi: 0.25, cc: 0.3 }), rib, cell, 'membext');
+  for (let i = 0; i < 1100; i++) rib.push({ p: randDir(V3()).multiplyScalar(3.07), s: rr(0.8, 1.2) });
+  mkInst(new THREE.IcosahedronGeometry(0.045, 1), pmat('#4a4fc9', { cutter: cut, emi: 0.03, cc: 0.3 }), rib, cell, 'membext');
 
   /* Lámina nuclear: malla de filamentos bajo la membrana interna */
   const lam = [];
-  for (let i = 0; i < 16; i++) {
-    const ph = Math.PI + ((i + 0.5) / 16) * Math.PI, pts = [];
+  for (let i = 0; i < 24; i++) {
+    const ph = ((i + 0.5) / 24) * TAU, pts = [];
     for (let j = 0; j <= 28; j++) pts.push(sph(2.79 + rr(-0.015, 0.015), 0.06 + (j / 28) * (Math.PI - 0.12), ph + rr(-0.03, 0.03)));
     lam.push(tubeGeo(pts, 80, 0.016, 4));
   }
   for (let j = 1; j < 12; j++) {
     const th = (j / 12) * Math.PI, pts = [];
-    for (let i = 0; i <= 28; i++) pts.push(sph(2.79 + rr(-0.015, 0.015), th + rr(-0.03, 0.03), Math.PI + (i / 28) * Math.PI));
-    lam.push(tubeGeo(pts, 80, 0.016, 4));
+    for (let i = 0; i <= 40; i++) pts.push(sph(2.79 + rr(-0.015, 0.015), th + rr(-0.03, 0.03), (i / 40) * TAU));
+    lam.push(tubeGeo(pts, 110, 0.016, 4));
   }
-  add(merge(lam), pmat('#8fd8ff', { emi: 0.45, cc: 0.3 }), 'lamina');
+  add(merge(lam), pmat('#5fa8d6', { cutter: cut, emi: 0.03, cc: 0.3 }), 'lamina');
 
   /* Complejos del poro: anillos de 8 subunidades, filamentos citoplasmáticos y canasta nuclear */
   const pg = [];
@@ -1881,38 +1881,37 @@ function buildNucDet() {
   const pores = [];
   for (let i = 0; i < 190; i++) {
     const y = 1 - (2 * (i + 0.5)) / 190, rad = Math.sqrt(1 - y * y), th = i * 2.39996, n = V3(Math.cos(th) * rad, y, Math.sin(th) * rad);
-    if (n.z > -0.12) continue;
     pores.push({ p: n.clone().multiplyScalar(2.93), q: alignQuat(n) });
   }
-  const poreM = mkInst(merge(pg), pmat('#ffe08a', { emi: 0.3, cc: 0.5, rough: 0.35 }), pores, cell, 'poros');
+  mkInst(merge(pg), pmat('#e2b23c', { cutter: cut, emi: 0.03, cc: 0.4, rough: 0.4 }), pores, cell, 'poros');
 
-  /* RE rugoso en continuidad con la membrana externa */
+  /* RE rugoso en continuidad con la membrana externa (a la izquierda del corte) */
   const rer = [], rerRib = [];
-  const sheet = (fn, nu, nv) => { rer.push(paramSurface(fn, nu, nv)); };
+  const PH0 = Math.PI / 2 + 0.15, PH1 = Math.PI + 0.55;
   [3.5, 3.95].forEach((rk, k) => {
-    const fn = (u, v, p) => { const ph = Math.PI - 0.32 + 1.25 * u, th = 0.8 + 1.5 * v; return sph(rk + 0.06 * Math.sin(ph * 7 + k * 2) + 0.04 * Math.sin(th * 9), th, ph, p); };
-    sheet(fn, 40, 30);
-    for (let i = 0; i < 260; i++) {
+    const fn = (u, v, p) => { const ph = PH0 + (PH1 - PH0) * u, th = 0.75 + 1.55 * v; return sph(rk + 0.06 * Math.sin(ph * 7 + k * 2) + 0.04 * Math.sin(th * 9), th, ph, p); };
+    rer.push(paramSurface(fn, 40, 30));
+    for (let i = 0; i < 300; i++) {
       const p = fn(R(), R(), V3()), n = p.clone().normalize();
       rerRib.push({ p: p.addScaledVector(n, (R() < 0.5 ? -1 : 1) * 0.05), s: rr(0.8, 1.2) });
     }
   });
-  sheet((u, v, p) => sph(3.0 + 0.5 * u, 1.05 + 0.9 * v, Math.PI - 0.26, p), 6, 16);
-  sheet((u, v, p) => sph(3.5 + 0.45 * u, 1.25 + 0.6 * v, Math.PI + 0.62, p), 6, 12);
-  add(merge(rer), pmat('#e0607f', { side: THREE.DoubleSide, cc: 0.6, rough: 0.34, sheen: 0.3, sheenColor: '#ffb8cb', emi: 0.06 }), 'rer');
-  mkInst(new THREE.IcosahedronGeometry(0.045, 1), pmat('#5b60ff', { emi: 0.25, cc: 0.3 }), rerRib, cell, 'rer');
+  rer.push(paramSurface((u, v, p) => sph(3.0 + 0.5 * u, 1.0 + 1.0 * v, PH0 + 0.12, p), 6, 16));
+  rer.push(paramSurface((u, v, p) => sph(3.5 + 0.45 * u, 1.2 + 0.7 * v, PH1 - 0.15, p), 6, 12));
+  add(merge(rer), pmat('#cf5f7c', { side: THREE.DoubleSide, cc: 0.5, rough: 0.4, emi: 0.02 }), 'rer');
+  mkInst(new THREE.IcosahedronGeometry(0.045, 1), pmat('#4a4fc9', { emi: 0.03, cc: 0.3 }), rerRib, cell, 'rer');
 
   /* Nucléolo: centros fibrilares, componente fibrilar denso y componente granular */
-  const NC = V3(0.8, 0.55, -1.15), nucleolus = new THREE.Group();
+  const NC = V3(-0.45, 0.35, -0.45), nucleolus = new THREE.Group();
   nucleolus.position.copy(NC);
-  nucleolus.add(new THREE.Mesh(lumpyGeo(0.85, 0.1, 4), pmat('#3b2fd0', { emissive: '#5a4dff', emi: 0.2, rough: 0.55, cc: 0.4, sheen: 0.8, sheenColor: '#a49bff' })));
-  const gr = new THREE.InstancedMesh(new THREE.SphereGeometry(0.045, 8, 6), pmat('#7468ff', { emi: 0.35 }), 260), M = new THREE.Matrix4();
+  nucleolus.add(new THREE.Mesh(lumpyGeo(0.85, 0.1, 4), pmat('#3528a8', { emi: 0.03, rough: 0.6, cc: 0.3 })));
+  const gr = new THREE.InstancedMesh(new THREE.SphereGeometry(0.045, 8, 6), pmat('#5f55d0', { emi: 0.03 }), 260), M = new THREE.Matrix4();
   for (let i = 0; i < 260; i++) gr.setMatrixAt(i, M.compose(randDir(V3()).multiplyScalar(0.86 * rr(0.98, 1.06)), new THREE.Quaternion(), _b.setScalar(rr(0.7, 1.3))));
   nucleolus.add(gr);
   for (let i = 0; i < 5; i++) {
-    const d = randDir(V3()); d.z = Math.abs(d.z) + 0.4; d.normalize().multiplyScalar(0.62);
-    const fc = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), pmat('#d9d4ff', { emi: 0.3 }));
-    const dfc = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 12), pmat('#8a80ff', { transparent: true, opacity: 0.55, emi: 0.2 }));
+    const d = randDir(V3()); d.x = Math.abs(d.x) + 0.3; d.z = Math.abs(d.z) + 0.3; d.normalize().multiplyScalar(0.62);
+    const fc = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), pmat('#c9c3f0', { emi: 0.03 }));
+    const dfc = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 12), pmat('#7a70d6', { transparent: true, opacity: 0.55, emi: 0.03 }));
     fc.position.copy(d); dfc.position.copy(d);
     nucleolus.add(fc, dfc);
   }
@@ -1921,46 +1920,44 @@ function buildNucDet() {
 
   /* Eucromatina (laxa) y heterocromatina (compacta, junto a la lámina y al nucléolo) */
   const eu = [];
-  for (let i = 0; i < 46; i++) {
-    let p = halfDir().multiplyScalar(rr(0.6, 2.4)), d = randDir(V3());
+  for (let i = 0; i < 70; i++) {
+    let p = randDir(V3()).multiplyScalar(rr(0.6, 2.4)), d = randDir(V3());
     const pts = [];
     for (let s = 0; s < 26; s++) {
       pts.push(p.clone());
       d.add(randDir(V3()).multiplyScalar(0.7)).normalize();
       p = p.clone().addScaledVector(d, 0.15);
       if (p.length() > 2.55) p.setLength(2.5);
-      if (p.z > -0.06) p.z = -0.06;
       if (p.distanceTo(NC) < 1.0) p.sub(NC).setLength(1.0).add(NC);
     }
     eu.push(tubeGeo(pts, 70, 0.026, 5));
   }
-  add(merge(eu), addWrithe(pmat('#c9a6f5', { emi: 0.06, cc: 0.5, rough: 0.4 }), 0.01, 0.5), 'eucro');
-  const hm = pmat('#5a2a9e', { emi: 0.12, rough: 0.6, cc: 0.2 }), het = [];
-  for (let i = 0; i < 40; i++) {
-    const p = i < 32 ? halfDir().multiplyScalar(2.52) : NC.clone().add(randDir(V3()).multiplyScalar(0.98));
-    if (p.z > -0.1) p.z = -0.1 - R() * 0.3;
+  add(merge(eu), addWrithe(pmat('#b08ee0', { cutter: cut, emi: 0.02, cc: 0.4, rough: 0.45 }), 0.01, 0.5), 'eucro');
+  const hm = pmat('#4a2286', { cutter: cut, emi: 0.02, rough: 0.6, cc: 0.2 }), het = [];
+  for (let i = 0; i < 56; i++) {
+    const p = i < 46 ? randDir(V3()).multiplyScalar(2.52) : NC.clone().add(randDir(V3()).multiplyScalar(0.98));
     const m = new THREE.Mesh(lumpyGeo(rr(0.17, 0.3), 0.25, 2), hm);
     m.position.copy(p); g.add(m); own(cell, 'hetero', m); het.push(m);
   }
 
   /* Nucleoplasma */
-  glassPlane(cell, 'nucleoplasma', new THREE.CircleGeometry(2.76, 96), '#9a7ad6');
   const np = [];
-  for (let i = 0; i < 900; i++) { const p = halfDir().multiplyScalar(rr(0.2, 2.7)); np.push(p.x, p.y, p.z); }
-  const npts = makePoints(np, { size: 2.0, alpha: 0.12, spin: 0.02, wob: 0.03, color: '#d9c4ff', order: 5 });
+  for (let i = 0; i < 1200; i++) { const p = randDir(V3()).multiplyScalar(rr(0.2, 2.7)); np.push(p.x, p.y, p.z); }
+  const npts = makePoints(np, { cutter: cut, size: 2.0, alpha: 0.1, spin: 0.02, wob: 0.03, color: '#d9c4ff', order: 5 });
   g.add(npts); own(cell, 'nucleoplasma', npts, { pick: false });
 
-  const front = (list) => list.reduce((b, it) => (it.p.z > b.p.z && it.p.y > 0 ? it : b), list[0]).p.clone();
-  anchor(cell, 'membext', V3(-0.55, 0.62, -0.56).normalize().multiplyScalar(3.04), 5);
-  anchor(cell, 'perinuc', V3(Math.cos(-1.2) * 2.925, Math.sin(-1.2) * 2.925, 0.01), 3);
-  anchor(cell, 'membint', V3(Math.cos(-0.55) * 2.865, Math.sin(-0.55) * 2.865, 0.01), 3);
-  anchor(cell, 'lamina', V3(Math.cos(3.6) * 2.795, Math.sin(3.6) * 2.795, 0.01), 3);
-  anchor(cell, 'poros', pores.reduce((b, it) => (it.p.distanceTo(V3(1.6, 1.9, -1.6)) < b.p.distanceTo(V3(1.6, 1.9, -1.6)) ? it : b), pores[0]).p.clone(), 2.6);
-  anchor(cell, 'nucleolo', NC.clone().add(V3(0, 0, 0.85)), 3.4);
-  anchor(cell, 'eucro', V3(-0.9, -0.2, -0.3), 3.5);
-  anchor(cell, 'hetero', het.reduce((b, m) => (m.position.z > b.position.z && m.position.y < 0 ? m : b), het[0]), 2.6);
-  anchor(cell, 'nucleoplasma', V3(-1.3, -1.5, -0.03), 4);
-  anchor(cell, 'rer', front(rerRib.filter((it) => it.p.length() > 3.7)), 3.5);
+  /* Anclas: sobre las caras del corte (plano x = 0 con z > 0, y plano z = 0 con x > 0) */
+  anchor(cell, 'membext', V3(-0.75, 0.55, 0.38).normalize().multiplyScalar(3.04), 5);
+  anchor(cell, 'perinuc', V3(0.01, Math.sin(-0.5) * 2.925, Math.cos(-0.5) * 2.925), 3);
+  anchor(cell, 'membint', V3(Math.cos(0.45) * 2.865, Math.sin(0.45) * 2.865, 0.01), 3);
+  anchor(cell, 'lamina', V3(Math.cos(-0.6) * 2.795, Math.sin(-0.6) * 2.795, 0.01), 3);
+  const visPore = pores.filter((it) => !inWedge(it.p) && it.p.x + it.p.z > 1.2 && it.p.y > 0.6);
+  anchor(cell, 'poros', (visPore[0] || pores[0]).p.clone(), 2.6);
+  anchor(cell, 'nucleolo', NC.clone().add(V3(0.55, 0.2, 0.55)), 3.4);
+  anchor(cell, 'eucro', V3(0.01, -0.9, 1.3), 3.5);
+  anchor(cell, 'hetero', het.reduce((b, m) => (m.position.x > 0 && m.position.z < 0 && m.position.z > -1.2 && m.position.y < 0 ? m : b), het[0]), 2.6);
+  anchor(cell, 'nucleoplasma', V3(1.4, -1.3, 0.01), 4);
+  anchor(cell, 'rer', rerRib.reduce((b, it) => (it.p.length() > 3.7 && it.p.z > b.p.z ? it : b), rerRib[0]).p.clone(), 3.5);
   return cell;
 }
 
@@ -1972,8 +1969,8 @@ function buildMemDet() {
   const prots = [{ x: -1.5, z: -0.6, r: 0.85, glyco: true }, { x: 1.7, z: 1.4, r: 0.75, chan: true }, { x: -0.5, z: 2.1, r: 0.65, glyco: true }, { x: 2.0, z: -1.8, r: 0.65 }];
   const blocked = (x, z) => prots.some((p) => Math.hypot(x - p.x, z - p.z) < p.r);
   const heads = [], tails = [], cHead = [], cBody = [], sugar = [];
-  const top = ['#5ec8ff', '#4aa8e8', '#7fd4ff'].map(col), bot = ['#5ec8ff', '#4aa8e8', '#ff9fc4'].map(col);
-  const sCol = ['#9ff0c4', '#7ee0a8', '#c8ffe0'].map(col);
+  const top = ['#3f86c9', '#3576b8', '#4a93d4'].map(col), bot = ['#3f86c9', '#3576b8', '#c9587e'].map(col);
+  const sCol = ['#3fa86a', '#2f9a5c', '#5bbd80'].map(col);
   const chain = (p, n, up) => {
     let q = p.clone(), d = V3(0, 1, 0);
     for (let i = 0; i < n; i++) {
@@ -2000,10 +1997,10 @@ function buildMemDet() {
       if (s > 0 && R() < 0.05) chain(V3(x, YH + 0.12, z), Math.floor(rr(3, 6)), false);
     }
   }
-  const hd = mkInst(new THREE.SphereGeometry(0.17, 14, 10), pmat('#ffffff', { emi: 0.12, cc: 0.6, rough: 0.3 }), heads, cell, 'cabezas');
-  const tl = mkInst(new THREE.CylinderGeometry(0.042, 0.03, 0.66, 6), pmat('#ffd27a', { emi: 0.1, rough: 0.45, cc: 0.3 }), tails, cell, 'colas');
-  mkInst(new THREE.SphereGeometry(0.075, 10, 8), pmat('#fff3b0', { emi: 0.25 }), cHead, cell, 'colesterol');
-  mkInst(new THREE.CapsuleGeometry(0.075, 0.4, 4, 8), pmat('#f5dd6a', { emi: 0.2, cc: 0.5 }), cBody, cell, 'colesterol');
+  const hd = mkInst(new THREE.SphereGeometry(0.17, 14, 10), pmat('#ffffff', { emi: 0.02, cc: 0.3, rough: 0.5, env: 0.35 }), heads, cell, 'cabezas');
+  const tl = mkInst(new THREE.CylinderGeometry(0.042, 0.03, 0.66, 6), pmat('#d9b24f', { emi: 0.02, rough: 0.55, cc: 0.2, env: 0.35 }), tails, cell, 'colas');
+  mkInst(new THREE.SphereGeometry(0.075, 10, 8), pmat('#f0a030', { emi: 0.02 }), cHead, cell, 'colesterol');
+  mkInst(new THREE.CapsuleGeometry(0.075, 0.4, 4, 8), pmat('#e08a1e', { emi: 0.02, cc: 0.4 }), cBody, cell, 'colesterol');
 
   /* Proteínas integrales, canal y periféricas */
   const lumpyCaps = (r, L) => {
@@ -2018,7 +2015,7 @@ function buildMemDet() {
     g2.computeVertexNormals();
     return g2;
   };
-  const integ = [], pm = pmat('#ff8fb1', { emi: 0.1, cc: 0.6, rough: 0.35, sheen: 0.3 });
+  const integ = [], pm = pmat('#c94f78', { emi: 0.04, cc: 0.6, rough: 0.35, sheen: 0.3 });
   for (const p of prots) {
     if (p.chan) continue;
     const m = new THREE.Mesh(lumpyCaps(p.r * 0.72, 1.55), pm);
@@ -2027,21 +2024,21 @@ function buildMemDet() {
   }
   const chan = new THREE.Group(), cp = prots[1];
   chan.position.set(cp.x, 0, cp.z);
-  const cm = pmat('#7ee0a8', { emi: 0.12, cc: 0.6, rough: 0.35 });
+  const cm = pmat('#3a9c68', { emi: 0.04, cc: 0.6, rough: 0.35 });
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * TAU, m = new THREE.Mesh(lumpyCaps(0.22, 2.0), cm);
     m.position.set(0.36 * Math.cos(a), 0, 0.36 * Math.sin(a)); chan.add(m);
   }
   const ions = [];
-  for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 10), pmat('#ffe08a', { emi: 0.6 })); chan.add(m); ions.push(m); }
+  for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 10), pmat('#ffe08a', { emi: 0.5 })); chan.add(m); ions.push(m); }
   g.add(chan); own(cell, 'canal', chan);
   cell.tick.push((t) => ions.forEach((m, i) => { const u = (t * 0.35 + i / 4) % 1; m.position.set(0, 2.2 - u * 4.4, 0); m.scale.setScalar(Math.max(0.001, Math.min(1, u * 8, (1 - u) * 8))); }));
   const per = [];
   for (const [x, y, z, r] of [[prots[0].x + 0.25, -1.62, prots[0].z + 0.15, 0.45], [0.5, -1.45, -1.1, 0.38], [-2.6, -1.42, 0.9, 0.34]]) {
-    const m = new THREE.Mesh(lumpyGeo(r, 0.15, 3), pmat('#c6a0ff', { emi: 0.12, cc: 0.5 }));
+    const m = new THREE.Mesh(lumpyGeo(r, 0.15, 3), pmat('#8a62c9', { emi: 0.02, cc: 0.4 }));
     m.position.set(x, y, z); g.add(m); own(cell, 'periferica', m); per.push(m);
   }
-  const sg = mkInst(new THREE.SphereGeometry(0.075, 10, 8), pmat('#ffffff', { emi: 0.25, cc: 0.5 }), sugar, cell, 'glucocaliz');
+  const sg = mkInst(new THREE.SphereGeometry(0.075, 10, 8), pmat('#ffffff', { emi: 0.02, cc: 0.4, env: 0.4 }), sugar, cell, 'glucocaliz');
 
   /* Corteza de actina: filamentos de doble hélice bajo la membrana */
   const act = [];
@@ -2056,7 +2053,7 @@ function buildMemDet() {
       }
     }
   }
-  const ac = mkInst(new THREE.SphereGeometry(0.1, 10, 8), pmat('#ff8fb8', { emi: 0.25, cc: 0.4 }), act, cell, 'cortical');
+  const ac = mkInst(new THREE.SphereGeometry(0.1, 10, 8), pmat('#c9507e', { emi: 0.02, cc: 0.3 }), act, cell, 'cortical');
   cell.tick.push((t) => {
     integ.forEach((m, i) => { m.rotation.y = Math.sin(t * 0.3 + i) * 0.3; });
     per.forEach((m, i) => { m.rotation.y = t * 0.2 + i; });
@@ -2097,7 +2094,7 @@ function buildGolgiDet() {
       P.setXYZ(k, x, P.getY(k) + y0 + bowl(x, z), z);
     }
     lg.computeVertexNormals();
-    const m = new THREE.Mesh(lg, pmat(cols[i], { cc: 0.7, rough: 0.3, sheen: 0.3, sheenColor: '#fff0c8', emi: 0.06, side: THREE.DoubleSide }));
+    const m = new THREE.Mesh(lg, pmat(cols[i], { cc: 0.7, rough: 0.3, sheen: 0.3, sheenColor: '#fff0c8', emi: 0.04, side: THREE.DoubleSide }));
     g.add(m); own(cell, ids[i], m);
   }
   const rim = (i, t, k = 1.04) => { const { a, b, y0 } = dims[i], x = a * k * Math.cos(t), z = b * k * Math.sin(t); return V3(x, y0 + bowl(x, z), z); };
@@ -2121,7 +2118,7 @@ function buildGolgiDet() {
       });
       gs.push(new THREE.SphereGeometry(rr(0.1, 0.15), 12, 10).translate(a.x, a.y, a.z));
     });
-    const m = new THREE.Mesh(merge(gs), pmat(color, { cc: 0.7, rough: 0.3, emi: 0.08, sheen: 0.3 }));
+    const m = new THREE.Mesh(merge(gs), pmat(color, { cc: 0.7, rough: 0.3, emi: 0.04, sheen: 0.3 }));
     g.add(m); own(cell, id, m);
     return nodes;
   };
@@ -2129,7 +2126,7 @@ function buildGolgiDet() {
 
   /* RE de transición con sitios de salida sin ribosomas */
   const erFn = (u, v, p) => p.set(-3 + 6 * u, -2.85 + 0.08 * Math.sin(u * 9) + 0.06 * Math.cos(v * 7), -1.9 + 3.8 * v);
-  const er = new THREE.Mesh(paramSurface(erFn, 60, 40), pmat('#e0607f', { side: THREE.DoubleSide, cc: 0.6, rough: 0.34, sheen: 0.3, sheenColor: '#ffb8cb', emi: 0.06 }));
+  const er = new THREE.Mesh(paramSurface(erFn, 60, 40), pmat('#e0607f', { side: THREE.DoubleSide, cc: 0.6, rough: 0.34, sheen: 0.3, sheenColor: '#ffb8cb', emi: 0.04 }));
   g.add(er); own(cell, 're', er);
   const erR = [];
   for (let i = 0; i < 420; i++) {
@@ -2137,15 +2134,15 @@ function buildGolgiDet() {
     if (Math.abs(p.x) < 1.3 && Math.abs(p.z) < 0.9) continue;
     erR.push({ p: p.add(V3(0, R() < 0.5 ? 0.06 : -0.06, 0)), s: rr(0.8, 1.2) });
   }
-  mkInst(new THREE.IcosahedronGeometry(0.05, 1), pmat('#5b60ff', { emi: 0.25 }), erR, cell, 're');
+  mkInst(new THREE.IcosahedronGeometry(0.05, 1), pmat('#5b60ff', { emi: 0.04 }), erR, cell, 're');
 
   /* Vesículas (con su cubierta) que viajan entre compartimentos */
   const vesicle = (id, r, fill, coat, opt = {}) => {
     const grp = new THREE.Group();
-    const sh = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12), pmat(fill, { transparent: true, opacity: 0.75, cc: 1, rough: 0.12, emi: 0.18 }));
+    const sh = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12), pmat(fill, { transparent: true, opacity: 0.75, cc: 1, rough: 0.12, emi: 0.04 }));
     sh.renderOrder = 2; grp.add(sh);
-    if (coat) { const cm = pmat(coat, { emi: 0.4 }); cm.wireframe = true; grp.add(new THREE.Mesh(new THREE.IcosahedronGeometry(r * 1.22, opt.det ?? 1), cm)); }
-    if (opt.core) grp.add(new THREE.Mesh(new THREE.SphereGeometry(r * 0.5, 12, 8), pmat(opt.core, { emi: 0.3 })));
+    if (coat) { const cm = pmat(coat, { emi: 0.04 }); cm.wireframe = true; grp.add(new THREE.Mesh(new THREE.IcosahedronGeometry(r * 1.22, opt.det ?? 1), cm)); }
+    if (opt.core) grp.add(new THREE.Mesh(new THREE.SphereGeometry(r * 0.5, 12, 8), pmat(opt.core, { emi: 0.04 })));
     g.add(grp); own(cell, id, grp);
     return grp;
   };
@@ -2196,12 +2193,12 @@ function buildFlagDet() {
     eg.applyMatrix4(new THREE.Matrix4().set(1, 0, 0, 0, 0, 0, 1, y0, 0, -1, 0, 0, 0, 0, 0, 1));
     const m = new THREE.Mesh(eg, mat); g.add(m); own(cell, id, m); return m;
   };
-  slab(-0.42, -0.08, 1.75, pmat('#f4d03f', { cc: 0.6, rough: 0.35, emi: 0.08 }), 'mi');
+  slab(-0.42, -0.08, 1.75, pmat('#f4d03f', { cc: 0.6, rough: 0.35, emi: 0.04 }), 'mi');
   slab(-0.08, 0.08, 1.75, pmat('#8a6a10', { rough: 0.6, emi: 0.05 }), 'mi');
-  slab(0.08, 0.42, 1.75, pmat('#f4d03f', { cc: 0.6, rough: 0.35, emi: 0.08 }), 'mi');
-  slab(3.05, 3.35, 1.55, pmat('#ff8a7a', { cc: 0.6, rough: 0.35, emi: 0.08 }), 'me');
+  slab(0.08, 0.42, 1.75, pmat('#f4d03f', { cc: 0.6, rough: 0.35, emi: 0.04 }), 'mi');
+  slab(3.05, 3.35, 1.55, pmat('#ff8a7a', { cc: 0.6, rough: 0.35, emi: 0.04 }), 'me');
   slab(3.35, 3.47, 1.55, pmat('#7a2018', { rough: 0.6, emi: 0.05 }), 'me');
-  slab(3.47, 3.8, 1.55, pmat('#e05a4b', { cc: 0.6, rough: 0.35, emi: 0.08 }), 'me');
+  slab(3.47, 3.8, 1.55, pmat('#e05a4b', { cc: 0.6, rough: 0.35, emi: 0.04 }), 'me');
   /* Lipopolisacárido sobre la membrana externa */
   const lps = [];
   for (let x = -W + 0.2; x < W; x += 0.42) for (let z = -0.15; z > -W; z -= 0.42) {
@@ -2210,7 +2207,7 @@ function buildFlagDet() {
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rr(-0.25, 0.25), 0, rr(-0.25, 0.25)));
     lps.push({ p: V3(xx, 4.15, zz), q });
   }
-  mkInst(new THREE.CylinderGeometry(0.05, 0.035, 0.7, 5), pmat('#ffb3a8', { emi: 0.15 }), lps, cell, 'me');
+  mkInst(new THREE.CylinderGeometry(0.05, 0.035, 0.7, 5), pmat('#ffb3a8', { emi: 0.04 }), lps, cell, 'me');
   /* Peptidoglucano: cadenas de glucanos unidas por puentes peptídicos */
   const pgG = [];
   for (const [yy, rot] of [[1.78, 0], [2.02, 1]]) {
@@ -2229,52 +2226,52 @@ function buildFlagDet() {
     if (Math.hypot(x, z) < 1.6 || z < -W + 0.4) continue;
     pgG.push(new THREE.CylinderGeometry(0.045, 0.045, 0.4, 5).rotateX(Math.PI / 2).translate(x, R() < 0.5 ? 1.78 : 2.02, z - 0.2));
   }
-  const pgM = new THREE.Mesh(merge(pgG), pmat('#c0392b', { cc: 0.5, rough: 0.4, emi: 0.1 }));
+  const pgM = new THREE.Mesh(merge(pgG), pmat('#c0392b', { cc: 0.5, rough: 0.4, emi: 0.04 }));
   g.add(pgM); own(cell, 'pg', pgM);
 
   /* Rotor: anillo C, anillo MS, varilla, gancho y filamento (giran juntos) */
   const rotor = new THREE.Group();
   g.add(rotor);
   const lathe = (pts) => new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), 64);
-  const cRing = new THREE.Mesh(lathe([[1.9, -3.3], [2.3, -3.3], [2.35, -2.2], [2.25, -1.15], [1.95, -1.15], [1.9, -3.3]]), pmat('#f4a261', { side: THREE.DoubleSide, cc: 0.6, rough: 0.35, emi: 0.1 }));
-  const fliM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.22, 12, 8), pmat('#ffc48a', { emi: 0.15, cc: 0.5 }), 34), M = new THREE.Matrix4();
+  const cRing = new THREE.Mesh(lathe([[1.9, -3.3], [2.3, -3.3], [2.35, -2.2], [2.25, -1.15], [1.95, -1.15], [1.9, -3.3]]), pmat('#f4a261', { side: THREE.DoubleSide, cc: 0.6, rough: 0.35, emi: 0.04 }));
+  const fliM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.22, 12, 8), pmat('#ffc48a', { emi: 0.04, cc: 0.5 }), 34), M = new THREE.Matrix4();
   for (let i = 0; i < 34; i++) { const a = (i / 34) * TAU; fliM.setMatrixAt(i, M.compose(V3(2.15 * Math.cos(a), -3.1, 2.15 * Math.sin(a)), new THREE.Quaternion(), _b.set(1, 1, 1))); }
   rotor.add(cRing, fliM); own(cell, 'anilloC', cRing); own(cell, 'anilloC', fliM);
   const ms = new THREE.Group();
-  ms.add(new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.26, 14, 48).rotateX(Math.PI / 2), pmat('#ffd84a', { emi: 0.15, cc: 0.6 })));
-  ms.add(new THREE.Mesh(lathe([[0.36, -0.2], [1.1, -0.2], [1.1, 0.2], [0.36, 0.2], [0.36, -0.2]]), pmat('#ffe58a', { emi: 0.12, side: THREE.DoubleSide })));
-  ms.add(new THREE.Mesh(lathe([[0.36, -1.15], [1.5, -1.15], [1.6, -0.7], [1.15, -0.25], [0.36, -0.25], [0.36, -1.15]]), pmat('#e8c23a', { emi: 0.1, side: THREE.DoubleSide })));
+  ms.add(new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.26, 14, 48).rotateX(Math.PI / 2), pmat('#ffd84a', { emi: 0.04, cc: 0.6 })));
+  ms.add(new THREE.Mesh(lathe([[0.36, -0.2], [1.1, -0.2], [1.1, 0.2], [0.36, 0.2], [0.36, -0.2]]), pmat('#ffe58a', { emi: 0.04, side: THREE.DoubleSide })));
+  ms.add(new THREE.Mesh(lathe([[0.36, -1.15], [1.5, -1.15], [1.6, -0.7], [1.15, -0.25], [0.36, -0.25], [0.36, -1.15]]), pmat('#e8c23a', { emi: 0.04, side: THREE.DoubleSide })));
   rotor.add(ms); own(cell, 'anilloMS', ms);
-  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 4.9, 24).translate(0, 1.95, 0), pmat('#e9f2ff', { emi: 0.1, cc: 0.6 }));
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 4.9, 24).translate(0, 1.95, 0), pmat('#e9f2ff', { emi: 0.04, cc: 0.6 }));
   rotor.add(rod); own(cell, 'varilla', rod);
-  const hook = new THREE.Mesh(tubeGeo([V3(0, 4.3, 0), V3(0.35, 5.2, 0.1), V3(-0.3, 6.3, -0.1), V3(0.15, 7.2, 0.05), V3(0, 8.0, 0)], 60, 0.62, 16), pmat('#1d9a68', { cc: 0.8, rough: 0.3, emi: 0.08 }));
+  const hook = new THREE.Mesh(tubeGeo([V3(0, 4.3, 0), V3(0.35, 5.2, 0.1), V3(-0.3, 6.3, -0.1), V3(0.15, 7.2, 0.05), V3(0, 8.0, 0)], 60, 0.62, 16), pmat('#1d9a68', { cc: 0.8, rough: 0.3, emi: 0.04 }));
   rotor.add(hook); own(cell, 'gancho', hook);
   const hp = [];
   for (let i = 0; i <= 200; i++) { const s = (i / 200) * 11, a = Math.min(1, s / 2) * 0.95; hp.push(V3(a * Math.cos((s / 4.2) * TAU), 8 + s, a * Math.sin((s / 4.2) * TAU))); }
-  const fil = new THREE.Mesh(tubeGeo(hp, 400, 0.55, 14), pmat('#27a065', { cc: 0.9, rough: 0.25, emi: 0.08, sheen: 0.5, sheenColor: '#c9ffe2' }));
+  const fil = new THREE.Mesh(tubeGeo(hp, 400, 0.55, 14), pmat('#27a065', { cc: 0.9, rough: 0.25, emi: 0.04, sheen: 0.5, sheenColor: '#c9ffe2' }));
   rotor.add(fil); own(cell, 'filamento', fil);
 
   /* Bujes fijos: anillos P y L */
-  const pR = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.3, 14, 40).rotateX(Math.PI / 2).translate(0, 1.9, 0), pmat('#ff8a45', { emi: 0.15, cc: 0.6 }));
-  const lR = new THREE.Mesh(new THREE.TorusGeometry(1.12, 0.32, 14, 40).rotateX(Math.PI / 2).translate(0, 3.42, 0), pmat('#ffb056', { emi: 0.15, cc: 0.6 }));
+  const pR = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.3, 14, 40).rotateX(Math.PI / 2).translate(0, 1.9, 0), pmat('#ff8a45', { emi: 0.04, cc: 0.6 }));
+  const lR = new THREE.Mesh(new THREE.TorusGeometry(1.12, 0.32, 14, 40).rotateX(Math.PI / 2).translate(0, 3.42, 0), pmat('#ffb056', { emi: 0.04, cc: 0.6 }));
   g.add(pR, lR); own(cell, 'anilloP', pR); own(cell, 'anilloL', lR);
 
   /* Estatores MotA/MotB anclados al peptidoglucano, con protones que los atraviesan */
-  const stat = new THREE.Group(), sm = pmat('#5ec8ff', { emi: 0.15, cc: 0.6, rough: 0.35 }), protons = [];
+  const stat = new THREE.Group(), sm = pmat('#5ec8ff', { emi: 0.04, cc: 0.6, rough: 0.35 }), protons = [];
   for (let i = 0; i < 11; i++) {
     const a = (i / 11) * TAU + 0.3, x = 2.75 * Math.cos(a), z = 2.75 * Math.sin(a);
     const motA = new THREE.Mesh(lumpyGeo(0.42, 0.1, 2).scale(1, 1.5, 1), sm); motA.position.set(x, -0.3, z);
     const motB = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.6, 8), sm); motB.position.set(x * 0.92, 1.0, z * 0.92);
     const cap = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8), sm); cap.position.set(x * 0.9, 1.78, z * 0.9);
     stat.add(motA, motB, cap);
-    if (i % 2 === 0) { const h = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), pmat('#ffffff', { emissive: '#bfefff', emi: 1.2 })); h.userData.p = V3(x, 0, z); stat.add(h); protons.push(h); }
+    if (i % 2 === 0) { const h = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), pmat('#ffffff', { emissive: '#bfefff', emi: 0.5 })); h.userData.p = V3(x, 0, z); stat.add(h); protons.push(h); }
   }
   g.add(stat); own(cell, 'estator', stat);
 
   /* Aparato de exportación tipo III dentro del anillo C */
   const exp = new THREE.Group();
-  exp.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.8, 2.4, 20).translate(0, -2.35, 0), pmat('#b388eb', { emi: 0.15, cc: 0.6 })));
-  exp.add(new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.22, 12, 30).rotateX(Math.PI / 2).translate(0, -3.75, 0), pmat('#c9a8ff', { emi: 0.2 })));
+  exp.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.8, 2.4, 20).translate(0, -2.35, 0), pmat('#b388eb', { emi: 0.04, cc: 0.6 })));
+  exp.add(new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.22, 12, 30).rotateX(Math.PI / 2).translate(0, -3.75, 0), pmat('#c9a8ff', { emi: 0.04 })));
   g.add(exp); own(cell, 'exportacion', exp);
 
   cell.tick.push((t) => {
@@ -2314,8 +2311,8 @@ cells.euk.center = V3();
 const VIEWS = {
   euk: { dir: V3(9.6, 7.0, 12.6).normalize(), dist: 24 },
   pro: { dir: V3(0.3, 0.62, 0.95).normalize(), dist: 19 },
-  mito: { dir: V3(0.12, 0.5, 1).normalize(), dist: 12.5 },
-  nuc: { dir: V3(0.22, 0.38, 1).normalize(), dist: 16.5 },
+  mito: { dir: V3(0.15, 0.8, 1).normalize(), dist: 13 },
+  nuc: { dir: V3(1, 0.55, 1).normalize(), dist: 17 },
   mem: { dir: V3(0.3, 0.45, 1).normalize(), dist: 15.5 },
   golgi: { dir: V3(0.18, 0.32, 1).normalize(), dist: 15.5 },
   flag: { dir: V3(0.25, 0.22, 1).normalize(), dist: 38 },
@@ -2337,6 +2334,7 @@ function ensureCell(key) {
   if (!cells[key]) {
     const c = DETAILS[key]();
     c.vis = 0; c.cutT = 0; c.delay = 0; c.group.visible = false;
+    if (c.cutters.length) c.group.traverse((o) => { if (o.isMesh && !o.userData.test && !o.userData.cutter && o.material.clippingPlanes) o.userData.cutter = c.cutters[0]; });
     cells[key] = c;
   }
   return cells[key];
@@ -2430,6 +2428,7 @@ function renderInfo() {
       <div class="ip-head" style="--c:${C.color}"><div><h3 style="font-size:25px;margin-top:4px">${C.title}</h3></div></div>
       <p>${C.desc}</p>
       <div class="ip-grid">${C.facts.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>
+      ${C.basis ? `<p class="ip-src"><b>Basado en:</b> ${C.basis}</p>` : ''}
       <div class="ip-fact" style="--c:${C.color}"><b>Cómo explorar</b>${det
         ? 'Hacé clic en cada componente del modelo, de la lista o de las etiquetas. Con <em>Recorrido</em> los ves todos, uno por uno. <em>Esc</em> vuelve a la célula.'
         : 'Hacé clic en cualquier estructura del modelo, de la lista o de las etiquetas. Con <em>Recorrido</em> las ves todas, una por una. Las que tienen <em>Estructura interna</em> se abren para ver sus componentes.'}</div>
@@ -2474,7 +2473,7 @@ infoEl.addEventListener('click', (e) => {
 function renderList() {
   const C = INFO[S.cell];
   listEl.innerHTML = C.parts.map((p, i) => `<li data-id="${p.id}" style="--c:${p.color};animation-delay:${i * 28}ms" title="${p.name}"><i></i>${p.short || p.name}</li>`).join('');
-  $('#count').textContent = C.parts.length + (C.parent ? ' componentes' : ' partes');
+  $('#count').textContent = C.parts.length + ' partes';
   $('#list .ph h2').textContent = C.parent ? 'Componentes' : 'Estructuras';
   syncList();
 }

@@ -4,6 +4,7 @@
 (function () {
   var INFO = {
     euk: {
+    basis: 'Alberts y col., Molecular Biology of the Cell, caps. 1 y 12 (compartimentos celulares); OpenStax Biology 2e, fig. 4.8 (célula animal).',
       kicker: 'Célula animal', title: 'Célula eucariota', color: '#5ec8ff', umPerUnit: 2.0,
       badge: ['Célula eucariota animal', 'Modelo esquemático · proporciones aproximadas'],
       desc: 'Tiene un núcleo verdadero rodeado por una envoltura y un sistema de orgánulos membranosos que se reparten el trabajo, como una fábrica con departamentos. Animales, plantas, hongos y protistas están formados por este tipo de célula.',
@@ -80,6 +81,7 @@
       ],
     },
     pro: {
+    basis: 'Alberts y col., cap. 1; Cooper, The Cell, cap. 1; OpenStax Biology 2e, fig. 4.5 (célula procariota).',
       kicker: 'Bacilo Gram negativo', title: 'Célula procariota', color: '#4fd38b', umPerUnit: 0.26,
       badge: ['Célula procariota · bacilo Gram negativo', 'Modelo esquemático · proporciones aproximadas'],
       desc: 'No tiene núcleo ni, en general, orgánulos membranosos: su ADN está libre en el citoplasma, en el nucleoide. Son las células más antiguas (unos 3.500 millones de años) y las más abundantes del planeta: bacterias y arqueas. El modelo muestra un bacilo Gram negativo, como E. coli.',
@@ -154,6 +156,7 @@
   /* Estructura interna de los orgánulos principales (vistas de detalle del modelo 3D).
      parent: célula a la que pertenecen · from: estructura de esa célula desde la que se abren */
   INFO.mito = {
+    basis: 'Alberts y col., cap. 14 (mitocondrias); Kühlbrandt (2015); Anderson y col. (1981).',
     parent: 'euk', from: 'mitocondrias', kicker: 'Estructura interna', title: 'Mitocondria', color: '#e5484d', umPerUnit: 0.14,
     badge: ['Mitocondria en corte', 'Modelo esquemático · proporciones aproximadas'],
     desc: 'Corte longitudinal de una mitocondria. Dos membranas delimitan dos compartimentos: el espacio intermembrana y la matriz. La membrana interna se pliega en crestas, donde la cadena respiratoria y la ATP sintasa producen la mayor parte del ATP de la célula.',
@@ -197,6 +200,7 @@
     ],
   };
   INFO.nuc = {
+    basis: 'Alberts y col., caps. 4 (cromatina) y 12 (envoltura y poros nucleares); Ou y col. (2017).',
     parent: 'euk', from: 'nucleo', kicker: 'Estructura interna', title: 'Núcleo', color: '#a46cf0', umPerUnit: 1.0,
     badge: ['Núcleo en corte', 'Modelo esquemático · proporciones aproximadas'],
     desc: 'Corte del núcleo. La envoltura nuclear son dos membranas separadas por el espacio perinuclear, atravesadas por los complejos del poro y sostenidas por la lámina nuclear. Adentro, la cromatina ocupa territorios y el nucléolo fabrica ribosomas.',
@@ -237,6 +241,7 @@
     ],
   };
   INFO.mem = {
+    basis: 'Singer y Nicolson (1972); Alberts y col., cap. 10 (estructura de la membrana).',
     parent: 'euk', from: 'membrana', kicker: 'Estructura interna', title: 'Membrana plasmática', color: '#5ec8ff', umPerUnit: 0.0012,
     badge: ['Membrana plasmática · mosaico fluido', 'Modelo esquemático · proporciones aproximadas'],
     desc: 'Fragmento de membrana según el modelo de mosaico fluido (Singer y Nicolson, 1972): una bicapa de lípidos en la que se mueven proteínas. Arriba está el medio extracelular, con el glucocáliz; abajo, el citosol y la corteza de actina.',
@@ -271,6 +276,7 @@
     ],
   };
   INFO.golgi = {
+    basis: 'Alberts y col., cap. 13 (tráfico de vesículas y aparato de Golgi).',
     parent: 'euk', from: 'golgi', kicker: 'Estructura interna', title: 'Aparato de Golgi', color: '#ff9b45', umPerUnit: 0.22,
     badge: ['Aparato de Golgi y tráfico de vesículas', 'Modelo esquemático · proporciones aproximadas'],
     desc: 'Pila de cisternas aplanadas con dos caras: la cis, que mira al RE y recibe vesículas COPII, y la trans, que despacha la carga ya modificada. Las proteínas avanzan de cisterna en cisterna mientras sus azúcares se modifican paso a paso.',
@@ -309,6 +315,7 @@
     ],
   };
   INFO.flag = {
+    basis: 'Berg (2003); Magariyama y col. (1994).',
     parent: 'pro', from: 'flagelo', kicker: 'Estructura interna', title: 'Motor flagelar y envoltura', color: '#27a065', umPerUnit: 0.01,
     badge: ['Motor del flagelo · envoltura Gram negativa', 'Modelo esquemático · proporciones aproximadas'],
     desc: 'Corte de la envoltura de una bacteria Gram negativa, como E. coli, con el motor del flagelo. Es un motor rotatorio verdadero: un rotor gira dentro de anillos fijos, impulsado por el flujo de protones a través de los estatores.',

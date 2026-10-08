@@ -3,7 +3,8 @@ CÉLULA 3D · Eucariota y Procariota
 
 Cómo abrirlo
 ------------
-Hacé doble clic en celula.html. Se abre en tu navegador (Chrome, Edge o Firefox actualizados).
+Hacé doble clic en index.html: se abre la vista 2D, y con el botón 3D (o la tecla V) pasás al modelo 3D.
+Se abre en tu navegador (Chrome, Edge o Firefox actualizados).
 No necesita internet ni servidor: todo lo que usa está en esta carpeta.
 
 Qué hay en la carpeta
@@ -11,7 +12,7 @@ Qué hay en la carpeta
 celula.html              La página 3D: modelos, animaciones e interfaz.
 celula2d.html            La versión 2D: ilustración plana interactiva (se abre con el botón 2D o la tecla V).
 datos.js                 Textos de cada estructura, compartidos por las dos vistas.
-index.html               Entrada para la web: redirige a celula.html (GitHub Pages abre index.html).
+index.html               Entrada: abre la vista 2D (celula2d.html). GitHub Pages abre index.html por defecto.
 .nojekyll                Archivo vacío: le indica a GitHub Pages que publique los archivos tal cual.
 lib/three-bundle.js      three.js r160 (motor 3D) con los complementos que usa la página:
                          controles de órbita, posprocesado (bloom), entorno de luz y utilidades de geometría.
