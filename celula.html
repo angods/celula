@@ -1731,14 +1731,14 @@ function buildMitoDet() {
     return geo;
   };
   const add = (geo, mat, id, o) => { const m = new THREE.Mesh(geo, mat); g.add(m); own(cell, id, m, o); return m; };
-  const COL = { om: '#c9483f', im: '#e8834f', cr: '#ee9356', mx: '#f6cf9c' };
+  const COL = { om: '#d9622b', im: '#ef9a45', cr: '#ef9a45', mx: '#f3dc9c' };
 
   add(capsule(RO), darkBack(pmat(COL.om, { cutter: cut, side: THREE.DoubleSide, cc: 0.35, rough: 0.5, sheen: 0.15, sheenColor: '#ffd0c0', emi: 0.02, env: 0.4 }), 0.5), 'membext');
   /* la cara interna de la membrana interna se ve con el color de la matriz que la llena */
-  add(capsule(1.3), darkBack(pmat(COL.im, { cutter: cut, side: THREE.DoubleSide, cc: 0.2, rough: 0.6, emi: 0.0, env: 0.3 }), 1, '#c98a5a'), 'membint');
-  own(cell, 'membext', makeCap(cell, cut, { A, B, rIn: 1.38, rOut: 1.45, mode: 0, c1: '#c9483f', ...box }));
-  own(cell, 'intermem', makeCap(cell, cut, { A, B, rIn: 1.33, rOut: 1.38, mode: 0, c1: '#f7dcc4', ...box }));
-  own(cell, 'membint', makeCap(cell, cut, { A, B, rIn: 1.27, rOut: 1.33, mode: 0, c1: '#e07a45', ...box }));
+  add(capsule(1.3), darkBack(pmat(COL.im, { cutter: cut, side: THREE.DoubleSide, cc: 0.2, rough: 0.6, emi: 0.0, env: 0.3 }), 1, '#e9cf8f'), 'membint');
+  own(cell, 'membext', makeCap(cell, cut, { A, B, rIn: 1.38, rOut: 1.45, mode: 0, c1: '#d9622b', ...box }));
+  own(cell, 'intermem', makeCap(cell, cut, { A, B, rIn: 1.33, rOut: 1.38, mode: 0, c1: '#f8e4c8', ...box }));
+  own(cell, 'membint', makeCap(cell, cut, { A, B, rIn: 1.28, rOut: 1.33, mode: 0, c1: '#ef9a45', ...box }));
   own(cell, 'matriz', makeCap(cell, cut, { A, B, rIn: 0, rOut: 1.27, mode: 0, c1: COL.mx, alpha: 0.05, order: 3, depthWrite: false, ...box }), { shell: 'glass' });
 
   /* Porinas: discretas, del mismo tono que la membrana externa */
@@ -1747,58 +1747,63 @@ function buildMitoDet() {
     const x = rr(-HL, HL), th = rr(0, TAU), n = V3(0, Math.cos(th), Math.sin(th));
     por.push({ p: V3(x, 0, 0).addScaledVector(n, RO + 0.005), q: alignQuat(n) });
   }
-  mkInst(new THREE.CylinderGeometry(0.035, 0.035, 0.025, 10), pmat('#a8352e', { cutter: cut, emi: 0.02, env: 0.4 }), por, cell, 'membext');
+  mkInst(new THREE.CylinderGeometry(0.035, 0.035, 0.025, 10), pmat('#b8501f', { cutter: cut, emi: 0.02, env: 0.4 }), por, cell, 'membext');
 
-  /* Crestas: pliegues aplanados de la membrana interna, alternando desde una pared y la otra.
-     En el plano de corte se ven como "dedos" dobles que entran en la matriz. */
-  const ri = (x) => { const ax = Math.abs(x); return ax <= HL ? 1.27 : Math.sqrt(Math.max(0, 1.27 * 1.27 - (ax - HL) * (ax - HL))); };
-  const D = 0.2, crGeos = [], cr = [];
+  /* Crestas: pliegues delgados y ondulados de la membrana interna, como en los diagramas de
+     referencia. Cada una es un saco aplanado (dos hojas de membrana que se unen en un borde
+     libre redondeado) que nace de una pared y avanza hacia la otra, alternando de lado.
+     En el plano de corte se ven como "dedos" de doble línea con su interior claro. */
+  const ri = (x) => { const ax = Math.abs(x); return ax <= HL ? 1.28 : Math.sqrt(Math.max(0, 1.28 * 1.28 - (ax - HL) * (ax - HL))); };
+  const H = 0.075, crGeos = [], cr = [];
+  const sheet = (fn) => paramSurface(fn, 36, 44);
   let k = 0;
-  for (let x = -HL - 0.8; x <= HL + 0.81; x += 0.5, k++) {
-    const r = ri(x) - 0.03;
-    if (r < 0.6) continue;
-    const s = k % 2 === 0 ? 1 : -1, c = -r * rr(0.1, 0.32), ta = Math.asin(c / r), w = r * Math.cos(ta), bul = 0.13;
-    const pt = (th) => [r * Math.cos(th), s * r * Math.sin(th)];
-    const sh = new THREE.Shape();
-    sh.moveTo(...pt(ta));
-    for (let i = 1; i <= 40; i++) sh.lineTo(...pt(ta + ((Math.PI - 2 * ta) * i) / 40));
-    sh.quadraticCurveTo(0, s * (c - bul), w, s * c);
-    sh.closePath();
-    const eg = new THREE.ExtrudeGeometry(sh, { depth: D, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.04, bevelSegments: 4, curveSegments: 10 });
-    eg.applyMatrix4(new THREE.Matrix4().set(0, 0, 1, x - D / 2, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1));
-    crGeos.push(eg);
-    /* borde libre de la cresta (de -w a +w), donde se ubican las filas de ATP sintasa */
-    const tip = (t) => { const u = 1 - t; return [-w * u * u + w * t * t, s * (u * u * c + 2 * t * u * (c - bul) + t * t * c)]; };
-    cr.push({ x, r, s, c, w, tip });
+  for (let x0 = -HL - 0.95; x0 <= HL + 0.96; x0 += 0.38, k++) {
+    const r = ri(x0) - 0.02;
+    if (r < 0.55) continue;
+    const s = k % 2 === 0 ? 1 : -1, c = -r * rr(0.2, 0.5), p1 = rr(0, TAU), p2 = rr(0, TAU), p3 = rr(0, TAU);
+    /* (a, b): a va de la pared (0) al borde libre (1); b recorre el ancho de lado a lado */
+    const zOf = (a, y) => r - a * (r - (c + 0.12 * Math.sin(y * 3.1 + p3)));
+    const wave = (y, z) => 0.08 * Math.sin(z * 2.3 + p1) + 0.05 * Math.sin(y * 2.9 + p2);
+    const half = (a) => H * Math.sqrt(Math.max(0, 1 - Math.pow(a, 6)));
+    const pos = (a, b, side, out) => {
+      const zz = zOf(a, 0), wmax = Math.sqrt(Math.max(r * r - zz * zz, 0)), y = b * wmax, z = zOf(a, y);
+      return out.set(x0 + wave(y, z) + side * half(a), y, s * z);
+    };
+    crGeos.push(sheet((u, v, p) => pos(v, u * 2 - 1, 1, p)));
+    crGeos.push(sheet((u, v, p) => pos(v, u * 2 - 1, -1, p)));
+    cr.push({ x0, r, s, c, pos });
   }
-  add(merge(crGeos), darkBack(pmat(COL.cr, { cutter: cut, side: THREE.DoubleSide, cc: 0.3, rough: 0.5, emi: 0.0, env: 0.35 }), 1, '#7a3a24'), 'crestas');
-
-  /* ATP sintasa: cabezas F1 en el borde de las crestas, mirando a la matriz.
-     Cadena respiratoria: algunos complejos en las caras de las crestas. */
-  const heads = [], stalks = [], etc = [], qx = alignQuat(V3(1, 0, 0)), qmx = alignQuat(V3(-1, 0, 0));
-  for (const C of cr) {
-    for (const sg of [-1, 1]) {
-      for (let i = 0; i < 3; i++) {
-        const [y, z] = C.tip(0.08 + 0.38 * (i / 2));
-        const b = V3(C.x + sg * (D / 2 + 0.04), y, z);
-        stalks.push({ p: b.clone().add(V3(sg * 0.05, 0, 0)), q: sg > 0 ? qx : qmx });
-        heads.push({ p: b.clone().add(V3(sg * 0.12, 0, 0)) });
-      }
-      for (let i = 0, guard = 0; i < 3 && guard < 200; guard++) {
-        const y = rr(-C.r, -0.15), z = C.s * rr(C.c + 0.15, C.r);
-        if (y * y + z * z > (C.r - 0.12) ** 2) continue;
-        etc.push({ p: V3(C.x + sg * (D / 2 + 0.04), y, z), q: sg > 0 ? qx : qmx, s: rr(0.85, 1.2) });
-        i++;
-      }
+  /* las normales de cada hoja deben mirar hacia la matriz: se corrige el sentido si hace falta */
+  for (let i = 0; i < crGeos.length; i++) {
+    const geo = crGeos[i], n = geo.attributes.normal, P = geo.attributes.position, C = cr[i >> 1], side = i % 2 === 0 ? 1 : -1;
+    const mid = Math.floor(P.count / 2);
+    if ((P.getX(mid) - C.x0) * side > 0 && n.getX(mid) * side < 0) {
+      const ix = geo.index.array; for (let j = 0; j < ix.length; j += 3) { const t = ix[j + 1]; ix[j + 1] = ix[j + 2]; ix[j + 2] = t; }
+      geo.computeVertexNormals();
     }
   }
-  mkInst(new THREE.SphereGeometry(0.055, 12, 8), pmat('#3d8fc4', { cutter: cut, emi: 0.02, cc: 0.3 }), heads, cell, 'atp');
-  mkInst(new THREE.CylinderGeometry(0.016, 0.016, 0.1, 6), pmat('#6aa9cf', { cutter: cut, emi: 0.02 }), stalks, cell, 'atp');
-  mkInst(new THREE.CapsuleGeometry(0.04, 0.06, 4, 8), pmat('#d6a43a', { cutter: cut, emi: 0.02, cc: 0.3 }), etc, cell, 'cadena');
+  add(merge(crGeos), darkBack(pmat(COL.cr, { cutter: cut, side: THREE.DoubleSide, cc: 0.25, rough: 0.55, emi: 0.0, env: 0.35 }), 1, '#f3bf82'), 'crestas');
+
+  /* ATP sintasa: pequeñas "piruletas" sobre las crestas, con la cabeza F1 hacia la matriz.
+     Cadena respiratoria: complejos incrustados en las mismas hojas. */
+  const heads = [], stalks = [], etc = [], qx = alignQuat(V3(1, 0, 0)), qmx = alignQuat(V3(-1, 0, 0)), _q = V3();
+  for (const C of cr) {
+    for (const sg of [-1, 1]) {
+      for (let i = 0; i < 4; i++) {
+        const b = C.pos(rr(0.6, 0.92), rr(-0.85, -0.08), sg, _q).clone();
+        stalks.push({ p: b.clone().add(V3(sg * 0.045, 0, 0)), q: sg > 0 ? qx : qmx });
+        heads.push({ p: b.clone().add(V3(sg * 0.1, 0, 0)) });
+      }
+      for (let i = 0; i < 2; i++) etc.push({ p: C.pos(rr(0.2, 0.6), rr(-0.8, -0.1), sg, _q).clone().add(V3(sg * 0.012, 0, 0)), q: sg > 0 ? qx : qmx, s: rr(0.85, 1.2) });
+    }
+  }
+  mkInst(new THREE.SphereGeometry(0.034, 10, 8), pmat('#c4702e', { cutter: cut, emi: 0.0, cc: 0.2 }), heads, cell, 'atp');
+  mkInst(new THREE.CylinderGeometry(0.012, 0.012, 0.08, 5), pmat('#c4702e', { cutter: cut, emi: 0.0 }), stalks, cell, 'atp');
+  mkInst(new THREE.SphereGeometry(0.05, 10, 8).scale(0.6, 1, 1), pmat('#b8562a', { cutter: cut, emi: 0.0, cc: 0.2 }), etc, cell, 'cadena');
 
   /* Matriz: gránulos de calcio, ADN mitocondrial (nucleoides) y mitorribosomas entre las crestas */
   const gaps = [];
-  for (let i = 0; i < cr.length - 1; i++) gaps.push({ x: (cr[i].x + cr[i + 1].x) / 2, r: Math.min(cr[i].r, cr[i + 1].r) });
+  for (let i = 0; i < cr.length - 1; i++) gaps.push({ x: (cr[i].x0 + cr[i + 1].x0) / 2, r: Math.min(cr[i].r, cr[i + 1].r) });
   const gran = [];
   for (let i = 0; i < 9; i++) { const G = gaps[(i * 3 + 1) % gaps.length]; gran.push({ p: V3(G.x, rr(-0.75, -0.2), rr(-0.6, 0.6)), s: rr(0.8, 1.2) }); }
   mkInst(new THREE.SphereGeometry(0.07, 12, 8), pmat('#5a2a1c', { cutter: cut, emi: 0.02, rough: 0.6 }), gran, cell, 'matriz');
@@ -1813,13 +1818,13 @@ function buildMitoDet() {
   });
   const ribs = [];
   for (const G of gaps) {
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 4; i++) {
       const y = rr(-G.r + 0.25, -0.12), z = rr(-G.r + 0.25, G.r - 0.25);
       if (y * y + z * z > (G.r - 0.2) ** 2) continue;
       ribs.push({ p: V3(G.x + rr(-0.06, 0.06), y, z), s: rr(0.85, 1.15) });
     }
   }
-  mkInst(new THREE.IcosahedronGeometry(0.04, 1), pmat('#4b4fb8', { cutter: cut, emi: 0.02, cc: 0.3 }), ribs, cell, 'mitorrib');
+  mkInst(new THREE.IcosahedronGeometry(0.032, 1), pmat('#4b4fb8', { cutter: cut, emi: 0.02, cc: 0.3 }), ribs, cell, 'mitorrib');
   cell.tick.push((t) => loops.forEach((m, i) => { m.rotation.y = Math.sin(t * 0.3 + i) * 0.4; }));
 
   /* Anclas de las etiquetas, sobre el plano de corte (y = 0) */
@@ -1827,8 +1832,8 @@ function buildMitoDet() {
   anchor(cell, 'membext', V3(-1.7, 0.01, -1.415), 4.5);
   anchor(cell, 'intermem', V3(1.2, 0.01, 1.355), 3);
   anchor(cell, 'membint', V3(-0.4, 0.01, -1.3), 3);
-  const C0 = cr.reduce((b, C) => (Math.abs(C.x + 1.0) < Math.abs(b.x + 1.0) ? C : b), cr[0]);
-  anchor(cell, 'crestas', V3(C0.x, 0.01, C0.s * (C0.c - 0.1)), 3.5);
+  const C0 = cr.reduce((b, C) => (Math.abs(C.x0 + 1.0) < Math.abs(b.x0 + 1.0) ? C : b), cr[0]);
+  anchor(cell, 'crestas', C0.pos(0.7, 0, 1, V3()).setY(0.01), 3.5);
   const G0 = gaps[Math.floor(gaps.length / 2)];
   anchor(cell, 'matriz', V3(G0.x, 0.01, 0.15), 4);
   anchor(cell, 'atp', near(heads, V3(1.2, 0, 0)), 2.4);
