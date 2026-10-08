@@ -28,6 +28,8 @@ Una página web que muestra en 3D una **célula eucariota (animal)** y una **cé
 | 🧭 **Recorrido guiado** | Pasa por todas las estructuras una por una |
 | ⚖️ **Comparar** | Tabla de diferencias entre eucariota y procariota |
 | 🎞️ **Animado** | Movimiento, brillo (bloom) e iluminación realista |
+| 🔎 **Estructura interna** | Modelos en corte de la mitocondria, el núcleo, la membrana plasmática, el aparato de Golgi y el motor del flagelo bacteriano, con cada componente explicado |
+| 📚 **Con fuentes** | Textos revisados con bibliografía de referencia (ver *Fuentes* más abajo) |
 | 🖼️ **Vista 2D** | Ilustración plana estilo libro de texto, con zoom y las mismas fichas (botón **2D** arriba a la derecha) |
 
 ## 🚀 Cómo abrirlo
@@ -51,6 +53,8 @@ Con el botón **2D** de la barra superior (o la tecla `V`) se abre `celula2d.htm
 | Acercar | Rueda o pellizco | — |
 | Desplazar | Clic derecho | — |
 | Ver información | Clic en la estructura | — |
+| Abrir la estructura interna | Botón **Estructura interna** de la ficha | `E` |
+| Volver de la estructura interna | Botón **Volver** | `Esc` |
 | Cambiar de célula | — | `1` / `2` |
 | Cambiar entre 3D y 2D | Botones **3D / 2D** | `V` |
 | Corte | — | `C` |
@@ -72,6 +76,21 @@ Con el botón **2D** de la barra superior (o la tecla `V`) se abre `celula2d.htm
 📁 fonts/             Tipografías Inter y Space Grotesk incrustadas
 📄 LEEME.txt          Instrucciones detalladas
 ```
+
+## 📚 Fuentes
+
+Los textos y los modelos se revisaron con estas fuentes. La lista también aparece en la ventana **Comparar**.
+
+- Alberts B. y col. *Molecular Biology of the Cell*, 4.ª ed. (2002) — [NCBI Bookshelf](https://www.ncbi.nlm.nih.gov/books/NBK21054/)
+- Cooper G. M. *The Cell: A Molecular Approach*, 2.ª ed. (2000) — [NCBI Bookshelf](https://www.ncbi.nlm.nih.gov/books/NBK9839/)
+- OpenStax. *Biology 2e*, cap. 4: Cell Structure — [openstax.org](https://openstax.org/books/biology-2e/pages/4-introduction)
+- Singer y Nicolson (1972), modelo de mosaico fluido — [Science](https://doi.org/10.1126/science.175.4023.720)
+- Ou y col. (2017), ChromEMT: estructura de la cromatina en células — [Science](https://doi.org/10.1126/science.aag0025)
+- Kühlbrandt (2015), complejos de la membrana mitocondrial — [BMC Biology](https://doi.org/10.1186/s12915-015-0201-x)
+- Anderson y col. (1981), genoma mitocondrial humano — [Nature](https://doi.org/10.1038/290457a0)
+- Ballabio (2016), *The awesome lysosome* — [EMBO Mol. Med.](https://doi.org/10.15252/emmm.201505966)
+- Berg (2003), el motor rotatorio del flagelo bacteriano — [Annu. Rev. Biochem.](https://doi.org/10.1146/annurev.biochem.72.121801.161737)
+- Magariyama y col. (1994), rotación flagelar muy rápida — [Nature](https://doi.org/10.1038/371752b0)
 
 ## 📜 Licencias
 
