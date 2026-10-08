@@ -156,7 +156,7 @@
   /* Estructura interna de los orgánulos principales (vistas de detalle del modelo 3D).
      parent: célula a la que pertenecen · from: estructura de esa célula desde la que se abren */
   INFO.mito = {
-    basis: 'Alberts y col., cap. 14 (mitocondrias); Kühlbrandt (2015); Anderson y col. (1981).',
+    basis: 'Alberts y col., cap. 14 (mitocondrias); OpenStax Biology 2e, fig. 4.11; Kühlbrandt (2015); revisión sobre la arquitectura de las crestas (Membranes, 2021); Anderson y col. (1981).',
     parent: 'euk', from: 'mitocondrias', kicker: 'Estructura interna', title: 'Mitocondria', color: '#e5484d', umPerUnit: 0.14,
     badge: ['Mitocondria en corte', 'Modelo esquemático · proporciones aproximadas'],
     desc: 'Corte longitudinal de una mitocondria. Dos membranas delimitan dos compartimentos: el espacio intermembrana y la matriz. La membrana interna se pliega en crestas, donde la cadena respiratoria y la ATP sintasa producen la mayor parte del ATP de la célula.',
@@ -371,6 +371,7 @@
     ['Singer S. J. y Nicolson G. L. The fluid mosaic model of the structure of cell membranes. Science 175, 720–731 (1972).', 'https://doi.org/10.1126/science.175.4023.720'],
     ['Ou H. D. y col. ChromEMT: visualizing 3D chromatin structure and compaction in interphase and mitotic cells. Science 357, eaag0025 (2017).', 'https://doi.org/10.1126/science.aag0025'],
     ['Kühlbrandt W. Structure and function of mitochondrial membrane protein complexes. BMC Biology 13, 89 (2015).', 'https://doi.org/10.1186/s12915-015-0201-x'],
+    ['Mitochondrial Cristae Architecture and Functions: Lessons from Minimal Model Systems. Membranes 11, 465 (2021).', 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8306996/'],
     ['Anderson S. y col. Sequence and organization of the human mitochondrial genome. Nature 290, 457–465 (1981).', 'https://doi.org/10.1038/290457a0'],
     ['Ballabio A. The awesome lysosome. EMBO Molecular Medicine 8, 73–76 (2016).', 'https://doi.org/10.15252/emmm.201505966'],
     ['Berg H. C. The rotary motor of bacterial flagella. Annual Review of Biochemistry 72, 19–54 (2003).', 'https://doi.org/10.1146/annurev.biochem.72.121801.161737'],

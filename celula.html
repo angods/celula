@@ -1697,10 +1697,11 @@ function moveAlong(cell, list, make) {
 }
 
 /* ---------- Mitocondria ----------
-   Corte longitudinal clásico de los libros (OpenStax fig. 4.11; Alberts cap. 14): se quita la
-   mitad superior y se ven la membrana externa lisa, la membrana interna que la acompaña y las
-   crestas, pliegues de la membrana interna que entran desde las paredes hacia la matriz.
-   El botón "Corte" abre y cierra el corte. */
+   Corte longitudinal como en los diagramas de los libros (OpenStax fig. 4.11; Alberts cap. 14):
+   se quita la mitad superior y la cara del corte es una sección plana y opaca donde se ven la
+   membrana externa, el espacio intermembrana, la membrana interna y las crestas como pliegues
+   en "U" que entran desde las paredes, conectados al espacio intermembrana por las uniones de
+   las crestas (Perkins y col., 1997; Mannella y col., 1994). El botón "Corte" lo abre y cierra. */
 /* Caras traseras más oscuras: en el corte, el interior de las membranas se distingue del exterior */
 function darkBack(m, k = 0.6, tint = null) {
   const c = tint ? col(tint) : null;
@@ -1713,7 +1714,7 @@ function darkBack(m, k = 0.6, tint = null) {
   return m;
 }
 function buildMitoDet() {
-  R = rng(912);
+  R = rng(913);
   const cell = makeCell('mito', 3.6), g = cell.group;
   const RO = 1.45, HL = 2.1, A = V3(-HL, 0, 0), B = V3(HL, 0, 0);
   const cut = new Cutter(V3(9, 9, 9), V3(-99, 0, -99));
@@ -1731,17 +1732,14 @@ function buildMitoDet() {
     return geo;
   };
   const add = (geo, mat, id, o) => { const m = new THREE.Mesh(geo, mat); g.add(m); own(cell, id, m, o); return m; };
-  const COL = { om: '#d9622b', im: '#ef9a45', cr: '#ef9a45', mx: '#f3dc9c' };
+  const COL = { om: '#d9622b', ims: '#f8e4c8', im: '#ef9a45', mx: '#f3dc9c', lum: '#f8e4c8' };
 
-  add(capsule(RO), darkBack(pmat(COL.om, { cutter: cut, side: THREE.DoubleSide, cc: 0.35, rough: 0.5, sheen: 0.15, sheenColor: '#ffd0c0', emi: 0.02, env: 0.4 }), 0.5), 'membext');
-  /* la cara interna de la membrana interna se ve con el color de la matriz que la llena */
-  add(capsule(1.3), darkBack(pmat(COL.im, { cutter: cut, side: THREE.DoubleSide, cc: 0.2, rough: 0.6, emi: 0.0, env: 0.3 }), 1, '#e9cf8f'), 'membint');
-  own(cell, 'membext', makeCap(cell, cut, { A, B, rIn: 1.38, rOut: 1.45, mode: 0, c1: '#d9622b', ...box }));
-  own(cell, 'intermem', makeCap(cell, cut, { A, B, rIn: 1.33, rOut: 1.38, mode: 0, c1: '#f8e4c8', ...box }));
-  own(cell, 'membint', makeCap(cell, cut, { A, B, rIn: 1.28, rOut: 1.33, mode: 0, c1: '#ef9a45', ...box }));
-  own(cell, 'matriz', makeCap(cell, cut, { A, B, rIn: 0, rOut: 1.27, mode: 0, c1: COL.mx, alpha: 0.05, order: 3, depthWrite: false, ...box }), { shell: 'glass' });
+  add(capsule(RO), pmat(COL.om, { cutter: cut, side: THREE.DoubleSide, cc: 0.35, rough: 0.5, sheen: 0.15, sheenColor: '#ffd0c0', emi: 0.02, env: 0.4 }), 'membext');
+  own(cell, 'membext', makeCap(cell, cut, { A, B, rIn: 1.38, rOut: 1.45, mode: 0, c1: COL.om, ...box }));
+  own(cell, 'intermem', makeCap(cell, cut, { A, B, rIn: 1.33, rOut: 1.38, mode: 0, c1: COL.ims, ...box }));
+  own(cell, 'membint', makeCap(cell, cut, { A, B, rIn: 1.28, rOut: 1.33, mode: 0, c1: COL.im, ...box }));
 
-  /* Porinas: discretas, del mismo tono que la membrana externa */
+  /* Porinas de la membrana externa */
   const por = [];
   for (let i = 0; i < 220; i++) {
     const x = rr(-HL, HL), th = rr(0, TAU), n = V3(0, Math.cos(th), Math.sin(th));
@@ -1749,97 +1747,117 @@ function buildMitoDet() {
   }
   mkInst(new THREE.CylinderGeometry(0.035, 0.035, 0.025, 10), pmat('#b8501f', { cutter: cut, emi: 0.02, env: 0.4 }), por, cell, 'membext');
 
-  /* Crestas: pliegues delgados y ondulados de la membrana interna, como en los diagramas de
-     referencia. Cada una es un saco aplanado (dos hojas de membrana que se unen en un borde
-     libre redondeado) que nace de una pared y avanza hacia la otra, alternando de lado.
-     En el plano de corte se ven como "dedos" de doble línea con su interior claro. */
+  /* ---- Cara del corte: una sección plana y opaca, como en los diagramas ----
+     Sobre el plano y = 0 se dibujan la matriz y las crestas. Cada cresta es un pliegue en "U"
+     de la membrana interna: una banda naranja con su espacio interior claro, que se abre al
+     espacio intermembrana por un cuello estrecho (la unión de la cresta). Las coordenadas 2D
+     (u, v) del dibujo corresponden a (x, z) del modelo. */
+  const flat = (shape, y) => new THREE.ShapeGeometry(shape, 24).rotateX(-Math.PI / 2).translate(0, y, 0);
+  const toShape = (pts) => { const s = new THREE.Shape(); s.moveTo(pts[0][0], -pts[0][1]); for (let i = 1; i < pts.length; i++) s.lineTo(pts[i][0], -pts[i][1]); s.closePath(); return s; };
+  const secMat = (c) => pmat(c, { side: THREE.DoubleSide, rough: 0.75, cc: 0.0, sheen: 0, emi: 0.0, env: 0.25 });
+  add(flat(stadiumInto(new THREE.Shape(), 1.285, HL), 0).rotateY(Math.PI / 2), secMat(COL.mx), 'matriz');
   const ri = (x) => { const ax = Math.abs(x); return ax <= HL ? 1.28 : Math.sqrt(Math.max(0, 1.28 * 1.28 - (ax - HL) * (ax - HL))); };
-  const H = 0.075, crGeos = [], cr = [];
-  const sheet = (fn) => paramSurface(fn, 36, 44);
+  /* contorno de una banda alrededor de una línea central, con punta redondeada y ancho variable */
+  const band = (C, hw) => {
+    const L = [], Rt = [], n = C.length;
+    for (let i = 0; i < n; i++) {
+      const p = C[i], q = C[Math.min(n - 1, i + 1)], o = C[Math.max(0, i - 1)];
+      let tx = q[0] - o[0], tz = q[1] - o[1]; const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
+      const h = hw(i / (n - 1));
+      L.push([p[0] - tz * h, p[1] + tx * h]); Rt.push([p[0] + tz * h, p[1] - tx * h]);
+    }
+    const e = C[n - 1], d = C[n - 2], ang = Math.atan2(e[1] - d[1], e[0] - d[0]), h = hw(1), tip = [];
+    for (let i = 1; i < 12; i++) { const a = ang + Math.PI / 2 - (i / 12) * Math.PI; tip.push([e[0] + Math.cos(a) * h, e[1] + Math.sin(a) * h]); }
+    return [...L, ...tip, ...Rt.reverse()];
+  };
+  const cr = [], memG = [], lumG = [];
   let k = 0;
-  for (let x0 = -HL - 0.95; x0 <= HL + 0.96; x0 += 0.38, k++) {
-    const r = ri(x0) - 0.02;
-    if (r < 0.55) continue;
-    const s = k % 2 === 0 ? 1 : -1, c = -r * rr(0.2, 0.5), p1 = rr(0, TAU), p2 = rr(0, TAU), p3 = rr(0, TAU);
-    /* (a, b): a va de la pared (0) al borde libre (1); b recorre el ancho de lado a lado */
-    const zOf = (a, y) => r - a * (r - (c + 0.12 * Math.sin(y * 3.1 + p3)));
-    const wave = (y, z) => 0.08 * Math.sin(z * 2.3 + p1) + 0.05 * Math.sin(y * 2.9 + p2);
-    const half = (a) => H * Math.sqrt(Math.max(0, 1 - Math.pow(a, 6)));
-    const pos = (a, b, side, out) => {
-      const zz = zOf(a, 0), wmax = Math.sqrt(Math.max(r * r - zz * zz, 0)), y = b * wmax, z = zOf(a, y);
-      return out.set(x0 + wave(y, z) + side * half(a), y, s * z);
-    };
-    crGeos.push(sheet((u, v, p) => pos(v, u * 2 - 1, 1, p)));
-    crGeos.push(sheet((u, v, p) => pos(v, u * 2 - 1, -1, p)));
-    cr.push({ x0, r, s, c, pos });
-  }
-  /* las normales de cada hoja deben mirar hacia la matriz: se corrige el sentido si hace falta */
-  for (let i = 0; i < crGeos.length; i++) {
-    const geo = crGeos[i], n = geo.attributes.normal, P = geo.attributes.position, C = cr[i >> 1], side = i % 2 === 0 ? 1 : -1;
-    const mid = Math.floor(P.count / 2);
-    if ((P.getX(mid) - C.x0) * side > 0 && n.getX(mid) * side < 0) {
-      const ix = geo.index.array; for (let j = 0; j < ix.length; j += 3) { const t = ix[j + 1]; ix[j + 1] = ix[j + 2]; ix[j + 2] = t; }
-      geo.computeVertexNormals();
+  for (let x0 = -HL - 0.62; x0 <= HL + 0.63; x0 += 0.4, k++) {
+    const r = ri(x0);
+    if (r < 0.7) continue;
+    const s = k % 2 === 0 ? 1 : -1, len = 2 * r * rr(0.62, 0.8), amp = rr(0.05, 0.09), ph = rr(0, TAU), N = 40, C = [];
+    /* línea central: nace en la pared (más allá de la membrana interna, para unirse con ella) y avanza en zigzag suave */
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1), z = s * (1.35 - t * (len + 0.07));
+      C.push([x0 + amp * Math.sin(t * 7.5 + ph) * Math.min(1, t * 4), z]);
     }
+    const W = 0.13, junction = (t) => (t < 0.08 ? 0.55 + 0.45 * (t / 0.08) : 1);
+    memG.push(flat(toShape(band(C, (t) => W * junction(t))), 0.004));
+    lumG.push(flat(toShape(band(C, (t) => W * 0.42 * junction(t) * (t > 0.97 ? 0.6 : 1))), 0.008));
+    cr.push({ x0, s, C, W });
   }
-  add(merge(crGeos), darkBack(pmat(COL.cr, { cutter: cut, side: THREE.DoubleSide, cc: 0.25, rough: 0.55, emi: 0.0, env: 0.35 }), 1, '#f3bf82'), 'crestas');
+  add(merge(memG), secMat(COL.im), 'crestas');
+  add(merge(lumG), secMat(COL.lum), 'crestas');
 
-  /* ATP sintasa: pequeñas "piruletas" sobre las crestas, con la cabeza F1 hacia la matriz.
-     Cadena respiratoria: complejos incrustados en las mismas hojas. */
-  const heads = [], stalks = [], etc = [], qx = alignQuat(V3(1, 0, 0)), qmx = alignQuat(V3(-1, 0, 0)), _q = V3();
-  for (const C of cr) {
-    for (const sg of [-1, 1]) {
-      for (let i = 0; i < 4; i++) {
-        const b = C.pos(rr(0.6, 0.92), rr(-0.85, -0.08), sg, _q).clone();
-        stalks.push({ p: b.clone().add(V3(sg * 0.045, 0, 0)), q: sg > 0 ? qx : qmx });
-        heads.push({ p: b.clone().add(V3(sg * 0.1, 0, 0)) });
+  /* ---- Lo que hay sobre la sección: ATP sintasa, cadena respiratoria, ribosomas, ADN y gránulos ---- */
+  const Y = 0.03, heads = [], stalks = [], etc = [];
+  for (const F of cr) {
+    const n = F.C.length;
+    for (const side of [-1, 1]) {
+      for (let i = 12; i < n - 3; i += 9) {
+        const p = F.C[i], q = F.C[i + 1];
+        let tx = q[0] - p[0], tz = q[1] - p[1]; const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
+        const nx = -tz * side, nz = tx * side, base = V3(p[0] + nx * F.W, Y, p[1] + nz * F.W), dir = V3(nx, 0, nz);
+        stalks.push({ p: base.clone().addScaledVector(dir, 0.04), q: alignQuat(dir) });
+        heads.push({ p: base.clone().addScaledVector(dir, 0.1) });
       }
-      for (let i = 0; i < 2; i++) etc.push({ p: C.pos(rr(0.2, 0.6), rr(-0.8, -0.1), sg, _q).clone().add(V3(sg * 0.012, 0, 0)), q: sg > 0 ? qx : qmx, s: rr(0.85, 1.2) });
+      for (const i of [7, 22]) {
+        const p = F.C[i], q = F.C[i + 1];
+        let tx = q[0] - p[0], tz = q[1] - p[1]; const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
+        etc.push({ p: V3(p[0] - tz * side * F.W * 0.72, 0.012, p[1] + tx * side * F.W * 0.72), s: rr(0.85, 1.15) });
+      }
     }
   }
-  mkInst(new THREE.SphereGeometry(0.034, 10, 8), pmat('#c4702e', { cutter: cut, emi: 0.0, cc: 0.2 }), heads, cell, 'atp');
-  mkInst(new THREE.CylinderGeometry(0.012, 0.012, 0.08, 5), pmat('#c4702e', { cutter: cut, emi: 0.0 }), stalks, cell, 'atp');
-  mkInst(new THREE.SphereGeometry(0.05, 10, 8).scale(0.6, 1, 1), pmat('#b8562a', { cutter: cut, emi: 0.0, cc: 0.2 }), etc, cell, 'cadena');
+  mkInst(new THREE.SphereGeometry(0.045, 12, 8), pmat('#c9692a', { emi: 0.0, cc: 0.2 }), heads, cell, 'atp');
+  mkInst(new THREE.CylinderGeometry(0.014, 0.014, 0.08, 6), pmat('#c9692a', { emi: 0.0 }), stalks, cell, 'atp');
+  mkInst(new THREE.SphereGeometry(0.045, 10, 8).scale(1, 0.5, 1), pmat('#a8461f', { emi: 0.0, cc: 0.2 }), etc, cell, 'cadena');
 
-  /* Matriz: gránulos de calcio, ADN mitocondrial (nucleoides) y mitorribosomas entre las crestas */
-  const gaps = [];
-  for (let i = 0; i < cr.length - 1; i++) gaps.push({ x: (cr[i].x0 + cr[i + 1].x0) / 2, r: Math.min(cr[i].r, cr[i + 1].r) });
-  const gran = [];
-  for (let i = 0; i < 9; i++) { const G = gaps[(i * 3 + 1) % gaps.length]; gran.push({ p: V3(G.x, rr(-0.75, -0.2), rr(-0.6, 0.6)), s: rr(0.8, 1.2) }); }
-  mkInst(new THREE.SphereGeometry(0.07, 12, 8), pmat('#5a2a1c', { cutter: cut, emi: 0.02, rough: 0.6 }), gran, cell, 'matriz');
-  const dnaM = addWrithe(pmat('#7d55c7', { cutter: cut, emi: 0.03, cc: 0.4, rough: 0.4 }), 0.008, 0.8);
-  const loops = [];
-  [[2, 0.3], [5, -0.35], [8, 0.25], [10, -0.2]].forEach(([gi, z0]) => {
-    const G = gaps[gi % gaps.length], pp = [];
-    for (let i = 0; i < 44; i++) { const t = (i / 44) * TAU; pp.push(V3(0.09 * Math.cos(t) + 0.025 * Math.sin(5 * t), 0.03 * Math.sin(3 * t), 0.22 * Math.sin(t) + 0.03 * Math.cos(4 * t))); }
-    const m = new THREE.Mesh(tubeGeo(pp, 120, 0.02, 6, true), dnaM);
-    m.position.set(G.x, -0.3, z0);
+  /* lugares libres de la matriz, lejos de las crestas */
+  const free = (pad) => {
+    for (let guard = 0; guard < 400; guard++) {
+      const x = rr(-HL - 0.9, HL + 0.9), z = rr(-1.1, 1.1);
+      if (segDist(V3(x, 0, z), A, B) > 1.1) continue;
+      let ok = true;
+      for (const F of cr) { for (const p of F.C) if (Math.hypot(p[0] - x, p[1] - z) < F.W + pad) { ok = false; break; } if (!ok) break; }
+      if (ok) return V3(x, Y, z);
+    }
+    return null;
+  };
+  const ribs = [], gran = [];
+  for (let i = 0; i < 70; i++) { const p = free(0.06); if (p) ribs.push({ p, s: rr(0.85, 1.15) }); }
+  for (let i = 0; i < 9; i++) { const p = free(0.12); if (p) gran.push({ p: p.setY(0.04), s: rr(0.8, 1.2) }); }
+  mkInst(new THREE.IcosahedronGeometry(0.035, 1), pmat('#4b4fb8', { emi: 0.0, cc: 0.3 }), ribs, cell, 'mitorrib');
+  mkInst(new THREE.SphereGeometry(0.065, 12, 8), pmat('#5a2a1c', { emi: 0.0, rough: 0.6 }), gran, cell, 'matriz');
+  const dnaM = addWrithe(pmat('#7d55c7', { emi: 0.02, cc: 0.4, rough: 0.4 }), 0.006, 0.8), loops = [];
+  for (const xc of [-2.2, -0.7, 0.8, 2.3]) {
+    let c0 = null;
+    for (let t = 0; t < 60 && !c0; t++) { const p = free(0.1); if (p && Math.abs(p.x - xc) < 0.6) c0 = p; }
+    if (!c0) continue;
+    const pp = [];
+    for (let i = 0; i < 44; i++) { const t = (i / 44) * TAU; pp.push(V3(0.13 * Math.cos(t) + 0.025 * Math.sin(5 * t), 0.012 * Math.sin(3 * t), 0.06 * Math.sin(t) + 0.02 * Math.cos(4 * t))); }
+    const m = new THREE.Mesh(tubeGeo(pp, 120, 0.018, 6, true), dnaM);
+    m.position.copy(c0).setY(0.03); m.rotation.y = rr(0, TAU);
     g.add(m); own(cell, 'adnmt', m); loops.push(m);
-  });
-  const ribs = [];
-  for (const G of gaps) {
-    for (let i = 0; i < 4; i++) {
-      const y = rr(-G.r + 0.25, -0.12), z = rr(-G.r + 0.25, G.r - 0.25);
-      if (y * y + z * z > (G.r - 0.2) ** 2) continue;
-      ribs.push({ p: V3(G.x + rr(-0.06, 0.06), y, z), s: rr(0.85, 1.15) });
-    }
   }
-  mkInst(new THREE.IcosahedronGeometry(0.032, 1), pmat('#4b4fb8', { cutter: cut, emi: 0.02, cc: 0.3 }), ribs, cell, 'mitorrib');
-  cell.tick.push((t) => loops.forEach((m, i) => { m.rotation.y = Math.sin(t * 0.3 + i) * 0.4; }));
+  cell.tick.push((t) => loops.forEach((m, i) => { m.rotation.y = i * 1.7 + Math.sin(t * 0.3 + i) * 0.25; }));
+  /* la sección solo debe verse con el corte abierto */
+  const section = [];
+  g.traverse((o) => { if ((o.isMesh || o.isInstancedMesh) && Math.abs(o.position.y) < 0.1 && !o.material.clippingPlanes && !o.userData.test && o.userData.part) section.push(o); });
+  cell.tick.push(() => { const show = cell.cutT > 0.98; section.forEach((o) => { o.visible = show; }); });
 
-  /* Anclas de las etiquetas, sobre el plano de corte (y = 0) */
+  /* Anclas de las etiquetas, sobre la sección */
   const near = (list, target) => list.reduce((b, it) => (it.p.distanceTo(target) < b.p.distanceTo(target) ? it : b), list[0]).p.clone();
   anchor(cell, 'membext', V3(-1.7, 0.01, -1.415), 4.5);
   anchor(cell, 'intermem', V3(1.2, 0.01, 1.355), 3);
-  anchor(cell, 'membint', V3(-0.4, 0.01, -1.3), 3);
-  const C0 = cr.reduce((b, C) => (Math.abs(C.x0 + 1.0) < Math.abs(b.x0 + 1.0) ? C : b), cr[0]);
-  anchor(cell, 'crestas', C0.pos(0.7, 0, 1, V3()).setY(0.01), 3.5);
-  const G0 = gaps[Math.floor(gaps.length / 2)];
-  anchor(cell, 'matriz', V3(G0.x, 0.01, 0.15), 4);
-  anchor(cell, 'atp', near(heads, V3(1.2, 0, 0)), 2.4);
-  anchor(cell, 'cadena', near(etc, V3(-2.0, 0, 0.6)), 2.4);
-  anchor(cell, 'adnmt', loops[1], 2.6);
-  anchor(cell, 'mitorrib', near(ribs, V3(2.3, 0, -0.3)), 2.4);
+  anchor(cell, 'membint', V3(-0.3, 0.01, -1.305), 3);
+  const C0 = cr.reduce((b, F) => (Math.abs(F.x0 + 1.0) < Math.abs(b.x0 + 1.0) ? F : b), cr[0]);
+  anchor(cell, 'crestas', V3(C0.C[30][0], 0.01, C0.C[30][1]), 3.5);
+  const mx = free(0.15) || V3(0, Y, 0);
+  anchor(cell, 'matriz', mx, 4);
+  anchor(cell, 'atp', near(heads, V3(1.2, 0, 0.3)), 2.4);
+  anchor(cell, 'cadena', near(etc, V3(-2.0, 0, 0.4)), 2.4);
+  anchor(cell, 'adnmt', loops[0] || V3(0, Y, 0), 2.6);
+  anchor(cell, 'mitorrib', near(ribs, V3(2.2, 0, -0.3)), 2.4);
   return cell;
 }
 
@@ -2326,7 +2344,7 @@ cells.euk.center = V3();
 const VIEWS = {
   euk: { dir: V3(9.6, 7.0, 12.6).normalize(), dist: 24 },
   pro: { dir: V3(0.3, 0.62, 0.95).normalize(), dist: 19 },
-  mito: { dir: V3(0.1, 0.85, 1).normalize(), dist: 12 },
+  mito: { dir: V3(0.08, 1.25, 1).normalize(), dist: 11.5 },
   nuc: { dir: V3(1, 0.55, 1).normalize(), dist: 17 },
   mem: { dir: V3(0.3, 0.45, 1).normalize(), dist: 15.5 },
   golgi: { dir: V3(0.18, 0.32, 1).normalize(), dist: 15.5 },
