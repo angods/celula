@@ -29,6 +29,17 @@ Publicar en GitHub Pages
 3. Settings > Pages > Build and deployment: "Deploy from a branch", rama main, carpeta / (root), Save.
 4. En uno o dos minutos queda en https://TU-USUARIO.github.io/celula-3d/
 
+Estructura interna
+------------------
+En la ficha de la mitocondria, el núcleo, la envoltura nuclear, la membrana plasmática, el aparato de Golgi,
+el flagelo y la envoltura bacteriana aparece el botón "Estructura interna": abre un modelo en corte con cada
+componente señalado y explicado. "Volver" o Esc regresan a la célula.
+
+Fuentes
+-------
+Los textos se revisaron con bibliografía de referencia (Alberts, Cooper, OpenStax y artículos científicos).
+La lista completa está en datos.js, en el README y en la ventana "Comparar".
+
 Requisitos
 ----------
 Un navegador con WebGL2 (cualquier Chrome, Edge o Firefox de los últimos años) y aceleración
@@ -37,5 +48,5 @@ por hardware activada.
 Controles
 ---------
 Arrastrar: rotar · Rueda o pellizco: acercar · Clic derecho: desplazar · Clic: ver información
-Teclas: 1 / 2 cambia de célula · V cambia entre 3D y 2D · C corte · L etiquetas · T recorrido · R vista · Espacio pausa
+Teclas: 1 / 2 cambia de célula · V cambia entre 3D y 2D · E abre la estructura interna de la parte elegida · C corte · L etiquetas · T recorrido · R vista · Espacio pausa
         Flechas: estructura anterior / siguiente · Esc: cerrar
