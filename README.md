@@ -28,6 +28,7 @@ Una página web que muestra en 3D una **célula eucariota (animal)** y una **cé
 | 🧭 **Recorrido guiado** | Pasa por todas las estructuras una por una |
 | ⚖️ **Comparar** | Tabla de diferencias entre eucariota y procariota |
 | 🎞️ **Animado** | Movimiento, brillo (bloom) e iluminación realista |
+| 🖼️ **Vista 2D** | Ilustración plana estilo libro de texto, con zoom y las mismas fichas (botón **2D** arriba a la derecha) |
 
 ## 🚀 Cómo abrirlo
 
@@ -36,7 +37,11 @@ Una página web que muestra en 3D una **célula eucariota (animal)** y una **cé
 
 No necesita servidor ni internet: three.js y las tipografías vienen incluidos. Solo hace falta un navegador con **WebGL2** (Chrome, Edge o Firefox actualizados).
 
-> 💡 Si movés el proyecto, llevá la carpeta completa: `celula.html` necesita `lib/` y `fonts/` a su lado.
+> 💡 Si movés el proyecto, llevá la carpeta completa: `celula.html` necesita `datos.js`, `lib/` y `fonts/` a su lado.
+
+### 🖼️ Vista 2D
+
+Con el botón **2D** de la barra superior (o la tecla `V`) se abre `celula2d.html`: la misma célula dibujada en plano, como en un libro de texto. Se mueve arrastrando, se acerca con la rueda, el pellizco o los botones **Acercar / Alejar**, y cada estructura tiene la misma ficha que en 3D. No necesita WebGL, así que anda en cualquier navegador. El botón **3D** vuelve al modelo y conserva la célula elegida.
 
 ## 🎮 Controles
 
@@ -47,6 +52,7 @@ No necesita servidor ni internet: three.js y las tipografías vienen incluidos. 
 | Desplazar | Clic derecho | — |
 | Ver información | Clic en la estructura | — |
 | Cambiar de célula | — | `1` / `2` |
+| Cambiar entre 3D y 2D | Botones **3D / 2D** | `V` |
 | Corte | — | `C` |
 | Etiquetas | — | `L` |
 | Recorrido | — | `T` |
@@ -59,6 +65,8 @@ No necesita servidor ni internet: three.js y las tipografías vienen incluidos. 
 
 ```
 📄 celula.html        La página: modelos 3D, animaciones, textos e interfaz
+📄 celula2d.html      Versión 2D: ilustración SVG interactiva
+📄 datos.js           Textos de cada estructura (los usan las dos vistas)
 📄 index.html         Entrada para GitHub Pages (redirige a celula.html)
 📁 lib/               three.js r160 + complementos (órbita, bloom, entorno)
 📁 fonts/             Tipografías Inter y Space Grotesk incrustadas
